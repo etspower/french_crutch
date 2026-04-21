@@ -1,0 +1,145 @@
+[
+  {
+    "id": 1,
+    "grammar_topic": "Passé composé",
+    "level": "B1",
+    "question_type": "cloze",
+    "question_text": "Hier, je ___ (manger) au restaurant.",
+    "options": [],
+    "answer": "ai mangé",
+    "explanation_zh": "passé composé：用 avoir 的现在时 + 过去分词。manger 的过去分词是 mangé，j' 的 avoir 形式是 ai。",
+    "explanation_en": "Passé composé uses the present of avoir + past participle. The past participle of manger is mangé, and j' takes ai."
+  },
+  {
+    "id": 2,
+    "grammar_topic": "Imparfait",
+    "level": "B1",
+    "question_type": "cloze",
+    "question_text": "Quand j'étais petit, je ___ (jouer) au foot tous les jours.",
+    "options": [],
+    "answer": "jouais",
+    "explanation_zh": "imparfait 表示过去持续或习惯性动作。jouer 的 imparfait 词根是 jou-，je 词尾 -ais → jouais。",
+    "explanation_en": "The imparfait describes past habitual or ongoing actions. Stem jou- + je ending -ais = jouais."
+  },
+  {
+    "id": 3,
+    "grammar_topic": "Subjonctif présent",
+    "level": "B2",
+    "question_type": "cloze",
+    "question_text": "Il faut que tu ___ (être) patient.",
+    "options": [],
+    "answer": "sois",
+    "explanation_zh": "Il faut que 后接虚拟式。être 的虚拟式：que je sois, que tu sois, qu'il soit...",
+    "explanation_en": "Il faut que requires the subjunctive. Subjunctive of être: que je sois, que tu sois, qu'il soit..."
+  },
+  {
+    "id": 4,
+    "grammar_topic": "Pronoms relatifs",
+    "level": "B1",
+    "question_type": "single_choice",
+    "question_text": "La fille ___ parle est ma sœur.",
+    "options": ["qui", "que", "dont", "où"],
+    "answer": "qui",
+    "explanation_zh": "qui 在关系从句中做主语，指人。'La fille qui parle' = 说话的那个女孩。",
+    "explanation_en": "qui acts as the subject in a relative clause referring to a person. 'La fille qui parle' = the girl who speaks."
+  },
+  {
+    "id": 5,
+    "grammar_topic": "Pronoms relatifs",
+    "level": "B2",
+    "question_type": "single_choice",
+    "question_text": "Le livre ___ je parle est intéressant.",
+    "options": ["qui", "que", "dont", "où"],
+    "answer": "dont",
+    "explanation_zh": "dont 代替 de + 关系代词。parler de quelque chose → le livre dont je parle。",
+    "explanation_en": "dont replaces de + relative pronoun. parler de quelque chose → le livre dont je parle."
+  },
+  {
+    "id": 6,
+    "grammar_topic": "Conditionnel présent",
+    "level": "B2",
+    "question_type": "cloze",
+    "question_text": "Si j'avais le temps, je ___ (voyager) autour du monde.",
+    "options": [],
+    "answer": "voyagerais",
+    "explanation_zh": "Si + imparfait, 主句用条件式现在时。voyager 的条件式词根为 voyager-，je 词尾 -rais → voyagerais。",
+    "explanation_en": "Si + imparfait, main clause uses conditionnel présent. Stem voyager- + je ending -rais = voyagerais."
+  },
+  {
+    "id": 7,
+    "grammar_topic": "Pronoms objets directs",
+    "level": "B1",
+    "question_type": "single_choice",
+    "question_text": "Je vois Marie. Je ___ vois au parc.",
+    "options": ["la", "le", "lui", "les"],
+    "answer": "la",
+    "explanation_zh": "Marie 是阴性直接宾语，用 la 代替。Je la vois = 我看见她。",
+    "explanation_en": "Marie is a feminine direct object, replaced by la. Je la vois = I see her."
+  },
+  {
+    "id": 8,
+    "grammar_topic": "Pronoms objets indirects",
+    "level": "B1",
+    "question_type": "single_choice",
+    "question_text": "Je parle à Paul. Je ___ parle souvent.",
+    "options": ["le", "la", "lui", "leur"],
+    "answer": "lui",
+    "explanation_zh": "parler à quelqu'un 用间接宾语代词。Paul 是单数，用 lui。Je lui parle = 我跟他说话。",
+    "explanation_en": "parler à quelqu'un takes an indirect object pronoun. Paul is singular, use lui. Je lui parle = I speak to him."
+  },
+  {
+    "id": 9,
+    "grammar_topic": "Accord participe passé",
+    "level": "B2",
+    "question_type": "single_choice",
+    "question_text": "Les lettres que j'ai ___ (écrire) sont longues.",
+    "options": ["écrit", "écrite", "écrits", "écrites"],
+    "answer": "écrites",
+    "explanation_zh": "que 作直接宾语提前，过去分词要与宾语性数配合。lettres 阴性复数 → écrites。",
+    "explanation_en": "When que is a preceding direct object, the past participle agrees in gender and number. lettres is feminine plural → écrites."
+  },
+  {
+    "id": 10,
+    "grammar_topic": "Plus-que-parfait",
+    "level": "B2",
+    "question_type": "cloze",
+    "question_text": "Quand il est arrivé, nous ___ déjà ___ (manger).",
+    "options": [],
+    "answer": "avions mangé",
+    "explanation_zh": "愈过去时 = avoir/être 的 imparfait + 过去分词。nous 的 avoir imparfait 是 avions，mangé 不变。",
+    "explanation_en": "Plus-que-parfait = imparfait of avoir/être + past participle. nous avoir imparfait is avions, mangé unchanged."
+  },
+  {
+    "id": 11,
+    "grammar_topic": "Conjonctions de subordination",
+    "level": "B2",
+    "question_type": "single_choice",
+    "question_text": "___ il pleuve, je sortirai quand même.",
+    "options": ["Bien que", "Même si", "Parce que", "Puisque"],
+    "answer": "Même si",
+    "explanation_zh": "même si = 即使，后接直陈式（此处 pleuve 实为虚拟式形，但在口语中 même si + 直陈式更常见）。bien que + 虚拟式。",
+    "explanation_en": "même si = even if, followed by indicative (colloquially). bien que requires subjunctive."
+  },
+  {
+    "id": 12,
+    "grammar_topic": "Passif",
+    "level": "B2",
+    "question_type": "cloze",
+    "question_text": "Ce livre a ___ (écrire) par Victor Hugo.",
+    "options": [],
+    "answer": "été écrit",
+    "explanation_zh": "被动语态 passé composé = être 的 passé composé + 过去分词。être 的 passé composé = a été，écrire 的过去分词 = écrit。",
+    "explanation_en": "Passive voice passé composé = passé composé of être + past participle. être passé composé = a été, écrire past participle = écrit."
+  },
+  {
+    "id": 13,
+    "grammar_topic": "Pronoms y / en",
+    "level": "B1",
+    "question_type": "single_choice",
+    "question_text": "Tu vas à Paris ? — Oui, j' ___ vais demain.",
+    "options": ["en", "y", "le", "lui"],
+    "answer": "y",
+    "explanation_zh": "y 代替 à + 地点。aller à Paris → j'y vais。en 代替 de + 名词。",
+    "explanation_en": "y replaces à + place. aller à Paris → j'y vais. en replaces de + noun."
+  }
+]

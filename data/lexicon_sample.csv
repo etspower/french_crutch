@@ -1,0 +1,26 @@
+﻿id,lemma,pos,level,zh_meaning,en_meaning,example_fr,example_zh,example_en
+1,bonjour,nm,A1,你好,hello,Bonjour, comment allez-vous ?,你好，您怎么样？,Hello, how are you?
+2,merci,nm,A1,谢谢,thank you,Merci beaucoup !,非常感谢！,Thank you very much!
+3,maison,nf,A1,房子,house,La maison est grande.,房子很大。,The house is big.
+4,manger,v,A1,吃,to eat,Nous mangeons à midi.,我们中午吃饭。,We eat at noon.
+5,chemin,nm,B1,路；道路,path; way,Quel est le meilleur chemin pour y aller ?,去那里最好的路是哪条？,What is the best way to get there?
+6,décider,v,B1,决定,to decide,Elle a décidé de partir.,她决定离开。,She decided to leave.
+7,souvenir,nm,B1,记忆；回忆,memory; souvenir,Ce souvenir me rend heureux.,这个回忆让我开心。,This memory makes me happy.
+8,essayer,v,B1,尝试,to try,J'essaie d'apprendre le français.,我尝试学法语。,I try to learn French.
+9,entier,adj,B1,整个的,whole; entire,Il a lu le livre entier.,他读完了整本书。,He read the entire book.
+10,raison,nf,B1,理由；道理,reason,Tu as raison !,你是对的！,You are right!
+11,atteindre,v,B2,达到；抵达,to reach; to achieve,Il a atteint son objectif.,他达到了目标。,He achieved his goal.
+12,cependant,adv,B2,然而；但是,however; nevertheless,Cependant, il fait froid.,然而，天气很冷。,However, it is cold.
+13,développement,nm,B2,发展,development,Le développement économique est rapide.,经济发展很快。,Economic development is rapid.
+14,évidemment,adv,B2,显然；明显地,obviously; evidently,Évidemment, il a raison.,显然，他是对的。,Obviously, he is right.
+15,fournir,v,B2,提供；供应,to provide; to supply,Ils fournissent des services.,他们提供服务。,They provide services.
+16,maintenir,v,B2,维持；保持,to maintain; to keep,Il faut maintenir la santé.,必须保持健康。,One must maintain health.
+17,particulier,adj,B2,特别的；特定的,particular; specific,Dans ce cas particulier...,在这个特别的情况下...,In this particular case...
+18,soutenir,v,B2,支持；支撑,to support; to sustain,Ses amis le soutiennent.,他的朋友们支持他。,His friends support him.
+19,probablement,adv,B2,可能；大概,probably; likely,Il viendra probablement demain.,他可能明天来。,He will probably come tomorrow.
+20,rencontrer,v,B2,遇见；碰面,to meet; to encounter,J'ai rencontré un vieil ami.,我遇到了一位老朋友。,I met an old friend.
+21,bien que,conj,B2,虽然；尽管,although; even though,Bien qu'il pleuve, je sors.,虽然在下雨，我还是出门。,Although it rains, I go out.
+22,ensuite,adv,B1,然后；接下来,then; next,D'abord on mange, ensuite on dort.,先吃饭，然后睡觉。,First we eat, then we sleep.
+23,plusieurs,adj,B1,好几个；几个,several; multiple,Plusieurs personnes sont venues.,好几个人来了。,Several people came.
+24,surtout,adv,B1,尤其；特别,especially; above all,J'aime le chocolat, surtout le noir.,我喜欢巧克力，尤其是黑巧克力。,I like chocolate, especially dark.
+25,comprendre,v,B1,理解；明白,to understand,Je ne comprends pas cette phrase.,我不理解这句话。,I don't understand this sentence.
