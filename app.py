@@ -1,12 +1,13 @@
 """
 法语拐杖 (French Crutch) - Gradio Web App
 目标用户：法语 0 基础自学者，目标 CEFR B1-B2
-功能模块：发音、单词与短语、听写、语法、设置面板
+功能模块：发音、单词与短语、听写、语法、设置面板、进度持久化
 """
 
 import json
 import random
 import os
+import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -34,7 +35,7 @@ DEFAULT_SETTINGS = {
 
 # 每日进度默认值（跨天自动重置）
 DEFAULT_DAILY_PROGRESS = {
-    "date": "",       # "YYYY-MM-DD"
+    "date": "",           # "YYYY-MM-DD"
     "new_words_today": 0,
     "reviewed_today": 0,
 }
@@ -51,11 +52,15 @@ def load_data():
     """加载所有数据文件，返回字典"""
     data = {}
 
-    # 加载词典
+    # 加载词典（确保始终有正确的列结构）
     if LEXICON_PATH.exists():
         data["lexicon"] = pd.read_csv(LEXICON_PATH)
     else:
-        data["lexicon"] = pd.DataFrame()
+        data["lexicon"] = pd.DataFrame(columns=[
+            "id", "lemma", "pos", "level",
+            "zh_meaning", "en_meaning",
+            "example_fr", "example_zh", "example_en"
+        ])
 
     # 加载语法题库
     if GRAMMAR_PATH.exists():
@@ -84,7 +89,7 @@ def init_sr_state(word_ids):
     """初始化间隔重复状态字典"""
     return {
         wid: {
-            "status": "new",  # new, learning, review, mastered
+            "status": "new",
             "interval_days": 0,
             "next_review_date": None,
             "ease_factor": SR_EASE_DEFAULT,
@@ -105,15 +110,14 @@ def update_sr_status(sr_state, word_id, quality):
     state = sr_state[word_id]
 
     # 更新 ease factor
-    new_ease = state["ease_factor"] + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
-    state["ease_factor"] = max(1.3, new_ease)  # 最小值 1.3
+    new_ease = (state["ease_factor"]
+                + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)))
+    state["ease_factor"] = max(1.3, new_ease)
 
     if quality < 3:
-        # 答错或模糊，重置间隔
         state["interval_days"] = SR_INTERVAL_MIN
         state["status"] = "learning"
     else:
-        # 答对，增加间隔
         if state["review_count"] == 0:
             state["interval_days"] = 1
         elif state["review_count"] == 1:
@@ -123,7 +127,9 @@ def update_sr_status(sr_state, word_id, quality):
         state["status"] = "review" if state["review_count"] < 3 else "mastered"
 
     state["review_count"] += 1
-    state["next_review_date"] = (datetime.now() + timedelta(days=state["interval_days"])).strftime("%Y-%m-%d")
+    state["next_review_date"] = (
+        datetime.now() + timedelta(days=state["interval_days"])
+    ).strftime("%Y-%m-%d")
 
     return sr_state
 
@@ -132,24 +138,22 @@ def get_due_words(sr_state, today=None):
     if today is None:
         today = datetime.now().strftime("%Y-%m-%d")
 
-    due = []
-    for wid, state in sr_state.items():
-        if (state["next_review_date"] and
-                state["next_review_date"] <= today and
-                state["status"] not in ("new", "mastered")):
-            due.append(wid)
-    return due
+    return [
+        wid for wid, state in sr_state.items()
+        if (state["next_review_date"]
+            and state["next_review_date"] <= today
+            and state["status"] not in ("new", "mastered"))
+    ]
 
 # =============================================================================
-# SR 选词辅助函数（模块级，供 generate_vocab_question 调用）
+# SR 选词辅助函数
 # =============================================================================
 
-def _get_new_word_candidates(lexicon_df, sr_state, level, daily_limit, new_words_today):
+def _get_new_word_candidates(lexicon_df, sr_state, daily_limit, new_words_today):
     """
-    筛选出可作为「新词」候选的单词：
-    - 不在 sr_state 中（即从未被学习过）
-    - 或在 sr_state 中但从未回答过（review_count == 0 且 next_review_date 为 None）
-    受到每日限额约束
+    筛选从未被复习过的新词候选，受每日限额约束。
+    判断标准：word_id 不在 sr_state 中，
+    或在 sr_state 中但 review_count == 0。
     """
     remaining = daily_limit - new_words_today
     if remaining <= 0:
@@ -158,19 +162,15 @@ def _get_new_word_candidates(lexicon_df, sr_state, level, daily_limit, new_words
     candidates = []
     for _, row in lexicon_df.iterrows():
         wid = str(row["id"])
-        if wid in sr_state:
-            state = sr_state[wid]
-            # 已初始化过且回答过的（哪怕只复习过一次）→ 不算新词
-            if state["review_count"] > 0:
-                continue
+        if wid in sr_state and sr_state[wid]["review_count"] > 0:
+            continue
         candidates.append(row)
 
     random.shuffle(candidates)
     return candidates[:remaining]
 
-
 def _filter_level(lexicon_df, target_level):
-    """按目标等级过滤词汇"""
+    """按目标等级过滤词汇（B1 包含 A1/A2）"""
     if target_level == "B1":
         return lexicon_df[lexicon_df["level"].isin([target_level, "A1", "A2"])]
     else:
@@ -182,17 +182,102 @@ def _filter_level(lexicon_df, target_level):
 
 def get_meaning_display(row, mode):
     """根据语言模式返回释义显示"""
-    if mode == "B":  # 纯中法
-        return f"{row['zh_meaning']}"
-    else:  # 中法+英法
+    if mode == "B":
+        return str(row["zh_meaning"])
+    else:
         return f"{row['zh_meaning']} | {row['en_meaning']}"
 
 def get_explanation_display(explanation_zh, explanation_en, mode):
-    """根据语言模式返回解析显示"""
+    """根据语言模式返回解析"""
     if mode == "B":
         return explanation_zh
     else:
         return f"【中文】{explanation_zh}\n【English】{explanation_en}"
+
+def _cross_day_reset(progress):
+    """检测并执行跨天重置，返回重置后的 progress"""
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    if progress["date"] != today_str:
+        return {
+            "date": today_str,
+            "new_words_today": 0,
+            "reviewed_today": 0,
+        }
+    return progress
+
+# =============================================================================
+# 进度持久化工具
+# =============================================================================
+
+def export_progress(sr_state, daily_progress, settings):
+    """
+    将 sr_state、daily_progress、settings 打包为 JSON，
+    写入临时文件，返回文件路径。
+    适配 Hugging Face Spaces（仅使用 tempfile，不触碰本地物理路径）。
+    """
+    payload = {
+        "version": 1,
+        "exported_at": datetime.now().isoformat(),
+        "sr_state": sr_state,
+        "daily_progress": daily_progress,
+        "settings": settings,
+    }
+
+    json_str = json.dumps(payload, ensure_ascii=False, indent=2)
+
+    # 使用 NamedTemporaryFile，确保文件在 HF Space 上可被访问
+    fd, tmp_path = tempfile.mkstemp(suffix=".json", prefix="french_crutch_progress_")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(json_str)
+    except Exception:
+        # fdopen 失败时直接重抛，不泄漏资源
+        raise
+
+    return tmp_path
+
+def import_progress(file_obj):
+    """
+    接收 Gradio 上传的 file_obj (dict 或 UploadedFile)。
+    解析后返回 (sr_state, daily_progress, settings, message)。
+    """
+    if file_obj is None:
+        return None, None, None, "❌ 未选择文件"
+
+    try:
+        # Gradio File 组件返回 dict: {"name": "...", "size": ..., "is_file": True}
+        if isinstance(file_obj, dict):
+            path = file_obj.get("name")
+        else:
+            path = str(file_obj)
+
+        if not path or not os.path.exists(path):
+            return None, None, None, "❌ 文件不存在或路径无效"
+
+        with open(path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+
+        sr_state = payload.get("sr_state", {})
+        daily_progress = payload.get("daily_progress", DEFAULT_DAILY_PROGRESS.copy())
+        settings = payload.get("settings", DEFAULT_SETTINGS.copy())
+
+        # 基础类型校验
+        if not isinstance(sr_state, dict):
+            return None, None, None, "❌ sr_state 格式错误"
+        if not isinstance(daily_progress, dict):
+            return None, None, None, "❌ daily_progress 格式错误"
+
+        word_count = len(sr_state)
+        msg = (f"✅ 导入成功！\n"
+               f"📚 已加载 {word_count} 条学习记录\n"
+               f"📅 上次学习日期: {daily_progress.get('date', '未知')}")
+
+        return sr_state, daily_progress, settings, msg
+
+    except json.JSONDecodeError:
+        return None, None, None, "❌ 文件不是有效的 JSON 格式"
+    except Exception as exc:
+        return None, None, None, f"❌ 导入失败: {exc}"
 
 # =============================================================================
 # Gradio UI 构建
@@ -210,12 +295,13 @@ def create_app():
         # =========================================================================
         # 全局状态
         # =========================================================================
-        settings_state = gr.State(DEFAULT_SETTINGS.copy())
-        sr_state = gr.State({})            # 间隔重复状态 {word_id: {...}}
-        daily_progress = gr.State(DEFAULT_DAILY_PROGRESS.copy())  # 每日进度
-        current_word_id = gr.State(None)    # 当前单词ID
-        current_grammar_id = gr.State(None) # 当前语法题ID
-        vocab_mode_state = gr.State("choice")  # 当前单词模式（用于 answer check）
+        settings_state    = gr.State(DEFAULT_SETTINGS.copy())
+        sr_state          = gr.State({})           # 间隔重复状态 {word_id: {...}}
+        daily_progress    = gr.State(DEFAULT_DAILY_PROGRESS.copy())
+        current_word_id    = gr.State(None)          # 当前单词ID
+        current_grammar_id = gr.State(None)         # 当前语法题ID
+        current_grammar_qtype = gr.State(None)      # 当前语法题类型 (single_choice / cloze)
+        vocab_mode_state  = gr.State("choice")      # 当前单词答题模式
 
         # =========================================================================
         # 标题
@@ -269,6 +355,57 @@ def create_app():
                     outputs=[settings_state, settings_msg]
                 )
 
+                # -----------------------------------------------------------------
+                # 数据管理区块（进度导入/导出）
+                # -----------------------------------------------------------------
+                gr.Markdown("---")
+                gr.Markdown("### 💾 数据管理")
+
+                with gr.Row():
+                    # 导出：DownloadButton 接收文件路径自动提供下载
+                    export_btn = gr.DownloadButton(
+                        label="📤 导出学习进度",
+                        file_types=[".json"],
+                        size="sm"
+                    )
+                    # 导入：File 组件接收用户上传
+                    import_btn = gr.UploadButton(
+                        label="📥 导入学习进度",
+                        file_types=[".json"],
+                        size="sm"
+                    )
+
+                import_msg = gr.Textbox(
+                    label="导入结果",
+                    interactive=False,
+                    lines=2
+                )
+
+                def on_export_click(sr, progress, settings):
+                    """导出按钮回调：生成临时文件并返回路径"""
+                    try:
+                        path = export_progress(sr, progress, settings)
+                        return path
+                    except Exception as exc:
+                        return None
+
+                def on_import_click(file_obj):
+                    """导入按钮回调：解析文件并返回新状态"""
+                    sr, prog, sett, msg = import_progress(file_obj)
+                    return sr, prog, sett, msg
+
+                export_btn.click(
+                    on_export_click,
+                    inputs=[sr_state, daily_progress, settings_state],
+                    outputs=[export_btn]
+                )
+
+                import_btn.upload(
+                    on_import_click,
+                    inputs=[import_btn],
+                    outputs=[sr_state, daily_progress, settings_state, import_msg]
+                )
+
             # =====================================================================
             # Tab 2: 发音
             # =====================================================================
@@ -283,24 +420,25 @@ def create_app():
                         phoneme_data_map = {p["symbol"]: p for p in DATA_CACHE["phonemes"]}
 
                         for p in DATA_CACHE["phonemes"]:
-                            btn = gr.Button(p["symbol"], size="sm", elem_classes=["phoneme-btn"])
+                            btn = gr.Button(
+                                p["symbol"],
+                                size="sm",
+                                elem_classes=["phoneme-btn"]
+                            )
                             phoneme_buttons.append((btn, p["symbol"]))
 
                     # 右侧：音标详情
                     with gr.Column(scale=2):
-                        phoneme_symbol = gr.Textbox(label="音标", interactive=False)
-                        phoneme_desc = gr.Textbox(label="发音描述", interactive=False, lines=3)
-                        phoneme_mouth = gr.Textbox(label="嘴型说明", interactive=False)
+                        phoneme_symbol  = gr.Textbox(label="音标", interactive=False)
+                        phoneme_desc    = gr.Textbox(label="发音描述", interactive=False, lines=3)
+                        phoneme_mouth   = gr.Textbox(label="嘴型说明", interactive=False)
                         phoneme_similar = gr.Textbox(label="类比音", interactive=False, lines=2)
-
-                        # 音频播放
-                        audio_player = gr.Audio(label="发音", type="filepath")
-                        audio_status = gr.Textbox(label="音频状态", interactive=False)
+                        audio_player    = gr.Audio(label="发音", type="filepath")
+                        audio_status    = gr.Textbox(label="音频状态", interactive=False)
 
                         def show_phoneme(symbol):
                             p = phoneme_data_map.get(symbol, {})
 
-                            # 构建音频路径
                             audio_path = None
                             status_msg = "音频待补全"
                             if p.get("audio_files"):
@@ -314,19 +452,23 @@ def create_app():
 
                             return (
                                 p.get("symbol", ""),
-                                f"中文：{p.get('description_zh', '')}\nEnglish：{p.get('description_en', '')}",
+                                (f"中文：{p.get('description_zh', '')}\n"
+                                 f"English：{p.get('description_en', '')}"),
                                 p.get("mouth_shape_note", ""),
-                                f"中文类比：{p.get('similar_sound_zh', '')}\nEnglish：{p.get('similar_sound_en', '')}",
+                                (f"中文类比：{p.get('similar_sound_zh', '')}\n"
+                                 f"English：{p.get('similar_sound_en', '')}"),
                                 audio_path,
-                                status_msg
+                                status_msg,
                             )
 
-                        # 绑定按钮事件
                         for btn, symbol in phoneme_buttons:
                             btn.click(
                                 show_phoneme,
-                                inputs=gr.State(symbol),
-                                outputs=[phoneme_symbol, phoneme_desc, phoneme_mouth, phoneme_similar, audio_player, audio_status]
+                                inputs=[gr.State(symbol)],
+                                outputs=[
+                                    phoneme_symbol, phoneme_desc, phoneme_mouth,
+                                    phoneme_similar, audio_player, audio_status
+                                ]
                             )
 
             # =====================================================================
@@ -336,7 +478,7 @@ def create_app():
                 gr.Markdown("### 背单词 + 间隔重复")
 
                 with gr.Row():
-                    # 左侧：学习模式选择
+                    # 左侧
                     with gr.Column(scale=1):
                         vocab_mode = gr.Radio(
                             choices=[("选择题", "choice"), ("拼写模式", "spelling")],
@@ -344,37 +486,31 @@ def create_app():
                             label="学习模式"
                         )
                         start_vocab_btn = gr.Button("开始/下一题", variant="primary")
-
-                        # 背单词计划显示
                         gr.Markdown("---")
                         vocab_plan_info = gr.Textbox(
                             label="今日进度",
                             interactive=False,
-                            lines=5
+                            lines=6
                         )
 
                     # 右侧：题目区域
                     with gr.Column(scale=2):
-                        vocab_question = gr.Textbox(label="题目", interactive=False, lines=2)
-                        vocab_options = gr.Radio(choices=[], label="选项", visible=False)
-                        vocab_input = gr.Textbox(label="输入法语单词", visible=False)
-                        vocab_submit = gr.Button("提交答案", visible=False)
-                        vocab_result = gr.Textbox(label="结果", interactive=False)
+                        vocab_question  = gr.Textbox(label="题目", interactive=False, lines=2)
+                        vocab_options   = gr.Radio(choices=[], label="选项", visible=False)
+                        vocab_input     = gr.Textbox(label="输入法语单词", visible=False)
+                        vocab_submit    = gr.Button("提交答案", visible=False)
+                        vocab_result    = gr.Textbox(label="结果", interactive=False)
                         vocab_explanation = gr.Textbox(label="解析", interactive=False, lines=3)
 
-                def update_vocab_plan(settings, progress):
+                # -----------------------------------------------------------------
+                # update_vocab_plan（已修复：接收 sr_state 参数）
+                # -----------------------------------------------------------------
+                def update_vocab_plan(settings, sr, progress):
                     """更新今日学习进度显示"""
+                    progress = _cross_day_reset(progress)
                     today_str = datetime.now().strftime("%Y-%m-%d")
-
-                    # 跨天重置
-                    if progress["date"] != today_str:
-                        progress = {
-                            "date": today_str,
-                            "new_words_today": 0,
-                            "reviewed_today": 0,
-                        }
-
                     lexicon = DATA_CACHE["lexicon"]
+
                     if lexicon.empty:
                         return "暂无词汇数据", progress
 
@@ -382,28 +518,28 @@ def create_app():
                     level_df = _filter_level(lexicon, level)
                     total_level = len(level_df)
 
-                    # 统计已初始化过的单词数
+                    # 干净地统计已学习的单词数（来自 sr_state，非全局缓存）
                     started = sum(
-                        1 for wid in (str(w) for w in level_df["id"])
-                        if wid in DATA_CACHE.get("_sr_pool", {})
+                        1 for wid in level_df["id"].astype(str)
+                        if wid in sr
                     )
-                    started = len([w for w in level_df["id"].astype(str)
-                                   if w in DATA_CACHE.get("_sr_pool", {})])
 
-                    due = get_due_words(DATA_CACHE.get("_sr_pool", {}), today_str)
+                    due = get_due_words(sr, today_str)
+                    due_in_level = [
+                        wid for wid in due
+                        if wid in level_df["id"].astype(str).values
+                    ]
 
                     daily = settings["daily_new_words"]
                     new_done = progress["new_words_today"]
                     new_left = max(0, daily - new_done)
-                    reviewed = progress["reviewed_today"]
-
-                    remaining = total_level - started
 
                     lines = [
                         f"📅 {today_str}",
                         f"✅ 今日新词: {new_done}/{daily}",
-                        f"🔄 待复习: {len(due)} 词",
+                        f"🔄 待复习: {len(due_in_level)} 词",
                         f"📚 本级词汇: {total_level} 词",
+                        f"📖 已启动: {started} 词",
                     ]
                     if new_left > 0:
                         lines.append(f"💡 今日还可学新词: {new_left} 个")
@@ -413,25 +549,17 @@ def create_app():
                     return "\n".join(lines), progress
 
                 # -----------------------------------------------------------------
-                # 核心重构：generate_vocab_question
+                # generate_vocab_question（已修复：移除 DATA_CACHE["_sr_pool"]）
                 # -----------------------------------------------------------------
                 def generate_vocab_question(mode, settings, sr_state_val, daily_progress_val):
                     """
-                    SR 驱动的选词逻辑：
-                    1. 优先抽取 due_words（待复习词汇）
-                    2. 无复习词 → 抽取新词（受每日限额约束）
-                    3. 两者均无 → 提示今日任务完成
+                    SR 驱动选词逻辑：
+                    1. 优先 due_words
+                    2. 次选新词（受每日限额）
+                    3. 两者皆空 → 完成提示
                     """
                     today_str = datetime.now().strftime("%Y-%m-%d")
-
-                    # 跨天重置每日进度
-                    if daily_progress_val["date"] != today_str:
-                        daily_progress_val = {
-                            "date": today_str,
-                            "new_words_today": 0,
-                            "reviewed_today": 0,
-                        }
-                        sr_state_val = {}  # 可选：是否跨天清空 SR 由需求决定
+                    daily_progress_val = _cross_day_reset(daily_progress_val)
 
                     lexicon = DATA_CACHE["lexicon"]
                     if lexicon.empty:
@@ -440,33 +568,27 @@ def create_app():
                             gr.update(visible=False),
                             gr.update(visible=False),
                             gr.update(visible=False),
-                            "",
-                            "",
-                            None,
-                            sr_state_val,
-                            daily_progress_val,
-                            "choice"
+                            "", "", None,
+                            sr_state_val, daily_progress_val,
+                            "choice", None
                         )
 
                     level = settings["target_level"]
                     level_words = _filter_level(lexicon, level)
 
-                    # 同步 sr_state_val 到全局缓存（供 update_vocab_plan 中的 get_due_words 使用）
-                    DATA_CACHE["_sr_pool"] = sr_state_val
-
-                    # -----------------------------------------------------------------
-                    # 优先级 1：复习词（get_due_words）
-                    # -----------------------------------------------------------------
+                    # 优先级 1：复习词
                     due_ids = get_due_words(sr_state_val, today_str)
-                    due_ids_filtered = [wid for wid in due_ids
-                                        if str(wid) in level_words["id"].astype(str).values]
+                    due_in_level = [
+                        wid for wid in due_ids
+                        if wid in level_words["id"].astype(str).values
+                    ]
 
-                    if due_ids_filtered:
-                        # 随机抽取一个复习词
-                        chosen_id = random.choice(due_ids_filtered)
-                        row = level_words[level_words["id"].astype(str) == chosen_id].iloc[0]
+                    if due_in_level:
+                        chosen_id = random.choice(due_in_level)
+                        row = level_words[
+                            level_words["id"].astype(str) == chosen_id
+                        ].iloc[0]
 
-                        # 初始化 SR 状态（如有必要）
                         if chosen_id not in sr_state_val:
                             sr_state_val[chosen_id] = {
                                 "status": "new",
@@ -475,26 +597,19 @@ def create_app():
                                 "ease_factor": SR_EASE_DEFAULT,
                                 "review_count": 0,
                             }
-
                         word_id = chosen_id
                         word_type = "review"
                     else:
-                        # -----------------------------------------------------------------
-                        # 优先级 2：新词（受每日限额约束）
-                        # -----------------------------------------------------------------
-                        daily_limit = settings["daily_new_words"]
-                        new_words_today = daily_progress_val["new_words_today"]
-
+                        # 优先级 2：新词
                         new_candidates = _get_new_word_candidates(
-                            level_words, sr_state_val, level,
-                            daily_limit, new_words_today
+                            level_words, sr_state_val,
+                            settings["daily_new_words"],
+                            daily_progress_val["new_words_today"]
                         )
 
                         if new_candidates:
                             row = new_candidates[0]
                             word_id = str(row["id"])
-
-                            # 初始化 SR 状态
                             sr_state_val[word_id] = {
                                 "status": "new",
                                 "interval_days": 0,
@@ -502,14 +617,10 @@ def create_app():
                                 "ease_factor": SR_EASE_DEFAULT,
                                 "review_count": 0,
                             }
-
-                            # 消耗一个新词配额
                             daily_progress_val["new_words_today"] += 1
                             word_type = "new"
                         else:
-                            # -----------------------------------------------------------------
-                            # 优先级 3：今日任务全部完成
-                            # -----------------------------------------------------------------
+                            # 优先级 3：完成
                             return (
                                 "🎉 恭喜！今日学习任务已完成\n\n"
                                 "✅ 新词目标达成\n"
@@ -518,35 +629,28 @@ def create_app():
                                 gr.update(visible=False),
                                 gr.update(visible=False),
                                 gr.update(visible=False),
-                                "",
-                                "",
-                                None,
-                                sr_state_val,
-                                daily_progress_val,
-                                mode
+                                "", "", None,
+                                sr_state_val, daily_progress_val,
+                                mode, None
                             )
 
-                    # -----------------------------------------------------------------
                     # 生成题目 UI
-                    # -----------------------------------------------------------------
-                    DATA_CACHE["_sr_pool"] = sr_state_val
+                    type_tag = "🔄" if word_type == "review" else "🆕"
 
                     if mode == "choice":
-                        correct_meaning = get_meaning_display(row, settings["language_mode"])
-
-                        # 干扰项：从同等级词汇中排除当前词后随机选 3 个
-                        distractors = level_words[level_words["id"].astype(str) != word_id].sample(
-                            min(3, len(level_words) - 1)
+                        correct_meaning = get_meaning_display(
+                            row, settings["language_mode"]
                         )
+                        distractors = level_words[
+                            level_words["id"].astype(str) != word_id
+                        ].sample(min(3, len(level_words) - 1))
                         wrong_meanings = [
                             get_meaning_display(r, settings["language_mode"])
                             for _, r in distractors.iterrows()
                         ]
-
                         options = wrong_meanings + [correct_meaning]
                         random.shuffle(options)
 
-                        type_tag = "🔄" if word_type == "review" else "🆕"
                         question = f"{type_tag}【{row['pos']}】{row['lemma']}"
 
                         return (
@@ -554,16 +658,15 @@ def create_app():
                             gr.update(choices=options, visible=True, value=None),
                             gr.update(visible=False),
                             gr.update(visible=True),
-                            "",
-                            "",
+                            "", "",
                             word_id,
-                            sr_state_val,
-                            daily_progress_val,
-                            mode
+                            sr_state_val, daily_progress_val,
+                            mode, None
                         )
                     else:
-                        meaning = get_meaning_display(row, settings["language_mode"])
-                        type_tag = "🔄" if word_type == "review" else "🆕"
+                        meaning = get_meaning_display(
+                            row, settings["language_mode"]
+                        )
                         question = f"{type_tag} 请拼写：{meaning}"
 
                         return (
@@ -571,71 +674,57 @@ def create_app():
                             gr.update(visible=False),
                             gr.update(visible=True, value=""),
                             gr.update(visible=True),
-                            "",
-                            "",
+                            "", "",
                             word_id,
-                            sr_state_val,
-                            daily_progress_val,
-                            mode
+                            sr_state_val, daily_progress_val,
+                            mode, None
                         )
 
                 # -----------------------------------------------------------------
-                # check_vocab_answer（统一处理两种模式）
+                # check_vocab_answer
                 # -----------------------------------------------------------------
-                def check_vocab_answer(radio_val, text_val, mode, word_id, settings, sr_state_val, daily_progress_val):
-                    """检查单词答案（mode 参数决定使用哪个输入）"""
+                def check_vocab_answer(
+                    radio_val, text_val, mode,
+                    word_id, settings, sr_state_val, daily_progress_val
+                ):
+                    """检查单词答案"""
                     if word_id is None:
                         return "请先开始题目", "", sr_state_val, daily_progress_val
 
-                    # 根据 mode 选择用户输入
                     user_answer = radio_val if mode == "choice" else text_val
-
                     lexicon = DATA_CACHE["lexicon"]
                     row = lexicon[lexicon["id"].astype(str) == str(word_id)].iloc[0]
                     correct_lemma = row["lemma"].lower().strip()
 
                     if mode == "choice":
-                        correct_meaning = get_meaning_display(row, settings["language_mode"])
-                        is_correct = user_answer == correct_meaning
+                        is_correct = user_answer == get_meaning_display(
+                            row, settings["language_mode"]
+                        )
                     else:
                         user_clean = (user_answer or "").lower().strip()
                         is_correct = user_clean == correct_lemma
 
-                    # 更新 SR 状态
                     quality = 5 if is_correct else (0 if mode == "spelling" else 3)
                     sr_state_val = update_sr_status(sr_state_val, word_id, quality)
 
-                    # 标记已复习
-                    today_str = datetime.now().strftime("%Y-%m-%d")
-                    if daily_progress_val["date"] != today_str:
-                        daily_progress_val = {
-                            "date": today_str,
-                            "new_words_today": 0,
-                            "reviewed_today": 0,
-                        }
+                    daily_progress_val = _cross_day_reset(daily_progress_val)
                     daily_progress_val["reviewed_today"] += 1
 
-                    # 构建反馈
                     example = f"例句：{row['example_fr']}\n{row['example_zh']}"
-                    if is_correct:
-                        result = "✅ 正确！"
-                    else:
-                        result = f"❌ 错误。正确答案是：{row['lemma']}"
+                    result = "✅ 正确！" if is_correct else (
+                        f"❌ 错误。正确答案是：{row['lemma']}"
+                    )
 
-                    explanation = f"{result}\n\n{example}"
+                    return result, f"{result}\n\n{example}", sr_state_val, daily_progress_val
 
-                    DATA_CACHE["_sr_pool"] = sr_state_val
-
-                    return result, explanation, sr_state_val, daily_progress_val
-
-                # 模式切换 → 更新 vocab_mode_state
+                # 模式切换
                 vocab_mode.change(
                     lambda m: m,
                     inputs=[vocab_mode],
                     outputs=[vocab_mode_state]
                 )
 
-                # 点击开始 → 触发选词
+                # 开始答题
                 start_vocab_btn.click(
                     generate_vocab_question,
                     inputs=[vocab_mode, settings_state, sr_state, daily_progress],
@@ -644,13 +733,13 @@ def create_app():
                         vocab_options, vocab_input, vocab_submit,
                         vocab_result, vocab_explanation,
                         current_word_id,
-                        sr_state,
-                        daily_progress,
+                        sr_state, daily_progress,
                         vocab_mode_state,
+                        current_grammar_qtype,
                     ]
                 )
 
-                # 提交答案 → 检查（始终传入两个输入，由函数内部根据 mode 决定用哪个）
+                # 提交答案（始终传入两个输入，由 mode 决定取哪个）
                 vocab_submit.click(
                     check_vocab_answer,
                     inputs=[
@@ -661,10 +750,10 @@ def create_app():
                     outputs=[vocab_result, vocab_explanation, sr_state, daily_progress]
                 )
 
-                # 初始化进度显示
+                # 初始化进度（传入 sr_state）
                 app.load(
                     update_vocab_plan,
-                    inputs=[settings_state, daily_progress],
+                    inputs=[settings_state, sr_state, daily_progress],
                     outputs=[vocab_plan_info, daily_progress]
                 )
 
@@ -676,7 +765,7 @@ def create_app():
 
                 with gr.Row():
                     with gr.Column(scale=1):
-                        dictation_start = gr.Button("开始听写", variant="primary")
+                        dictation_start  = gr.Button("开始听写", variant="primary")
                         play_hint = gr.Textbox(
                             label="提示",
                             value="点击开始，然后输入你听到的单词",
@@ -689,29 +778,18 @@ def create_app():
                         )
 
                     with gr.Column(scale=2):
-                        dictation_input = gr.Textbox(label="输入你听到的单词")
+                        dictation_input  = gr.Textbox(label="输入你听到的单词")
                         dictation_submit = gr.Button("提交")
                         dictation_result = gr.Textbox(label="结果", interactive=False)
                         dictation_answer = gr.Textbox(label="正确答案", interactive=False)
 
                 # -----------------------------------------------------------------
-                # 核心重构：start_dictation
+                # start_dictation
                 # -----------------------------------------------------------------
                 def start_dictation(settings, sr_state_val, daily_progress_val):
-                    """
-                    听写选词逻辑：
-                    - 仅从 get_due_words（今日到期复习词汇）中抽取
-                    - due_words 为空 → 提示无复习任务
-                    """
+                    """听写选词：仅从 due_words 中抽取"""
                     today_str = datetime.now().strftime("%Y-%m-%d")
-
-                    # 跨天重置（同步）
-                    if daily_progress_val["date"] != today_str:
-                        daily_progress_val = {
-                            "date": today_str,
-                            "new_words_today": 0,
-                            "reviewed_today": 0,
-                        }
+                    daily_progress_val = _cross_day_reset(daily_progress_val)
 
                     lexicon = DATA_CACHE["lexicon"]
                     if lexicon.empty:
@@ -720,35 +798,31 @@ def create_app():
                     level = settings["target_level"]
                     level_words = _filter_level(lexicon, level)
 
-                    # 仅从到期词汇中选
                     due_ids = get_due_words(sr_state_val, today_str)
                     due_in_level = [
                         wid for wid in due_ids
-                        if str(wid) in level_words["id"].astype(str).values
+                        if wid in level_words["id"].astype(str).values
                     ]
 
                     if not due_in_level:
-                        # 无复习词
                         stats = (
                             f"📅 {today_str}\n"
                             f"🔄 待复习: 0 词\n"
-                            f"✅ 新词听写需先在「单词」模块学习"
+                            f"✅ 请先在「单词」模块开始学习"
                         )
                         return (
                             "📭 今日暂无需要复习听写的单词\n\n"
                             "💡 请先在「单词与短语」模块完成今日学习计划，\n"
                             "    复习词积累后即可开始听写练习。",
-                            None,
-                            stats,
-                            sr_state_val,
-                            daily_progress_val
+                            None, stats,
+                            sr_state_val, daily_progress_val
                         )
 
-                    # 随机抽取一个到期词汇
                     chosen_id = random.choice(due_in_level)
-                    row = level_words[level_words["id"].astype(str) == str(chosen_id)].iloc[0]
+                    row = level_words[
+                        level_words["id"].astype(str) == str(chosen_id)
+                    ].iloc[0]
 
-                    # 确保 SR 状态存在
                     if str(chosen_id) not in sr_state_val:
                         sr_state_val[str(chosen_id)] = {
                             "status": "new",
@@ -770,7 +844,10 @@ def create_app():
                 # -----------------------------------------------------------------
                 # check_dictation
                 # -----------------------------------------------------------------
-                def check_dictation(user_input, word_id, settings, sr_state_val, daily_progress_val):
+                def check_dictation(
+                    user_input, word_id,
+                    settings, sr_state_val, daily_progress_val
+                ):
                     """检查听写答案"""
                     if word_id is None:
                         return "请先开始", "", sr_state_val, daily_progress_val
@@ -784,31 +861,34 @@ def create_app():
                     quality = 5 if is_correct else 2
                     sr_state_val = update_sr_status(sr_state_val, word_id, quality)
 
-                    # 标记已复习
-                    today_str = datetime.now().strftime("%Y-%m-%d")
-                    if daily_progress_val["date"] != today_str:
-                        daily_progress_val = {
-                            "date": today_str,
-                            "new_words_today": 0,
-                            "reviewed_today": 0,
-                        }
+                    daily_progress_val = _cross_day_reset(daily_progress_val)
                     daily_progress_val["reviewed_today"] += 1
 
                     result = "✅ 正确！" if is_correct else "❌ 错误"
-                    answer = f"{row['lemma']} - {get_meaning_display(row, settings['language_mode'])}"
+                    answer = (f"{row['lemma']} - "
+                              f"{get_meaning_display(row, settings['language_mode'])}")
 
                     return result, answer, sr_state_val, daily_progress_val
 
                 dictation_start.click(
                     start_dictation,
                     inputs=[settings_state, sr_state, daily_progress],
-                    outputs=[play_hint, current_word_id, dictation_stats, sr_state, daily_progress]
+                    outputs=[
+                        play_hint, current_word_id,
+                        dictation_stats, sr_state, daily_progress
+                    ]
                 )
 
                 dictation_submit.click(
                     check_dictation,
-                    inputs=[dictation_input, current_word_id, settings_state, sr_state, daily_progress],
-                    outputs=[dictation_result, dictation_answer, sr_state, daily_progress]
+                    inputs=[
+                        dictation_input, current_word_id,
+                        settings_state, sr_state, daily_progress
+                    ],
+                    outputs=[
+                        dictation_result, dictation_answer,
+                        sr_state, daily_progress
+                    ]
                 )
 
             # =====================================================================
@@ -819,92 +899,108 @@ def create_app():
 
                 with gr.Row():
                     with gr.Column(scale=1):
-                        grammar_start = gr.Button("下一题", variant="primary")
-                        grammar_topic = gr.Textbox(label="语法点", interactive=False)
-                        grammar_level = gr.Textbox(label="等级", interactive=False)
+                        grammar_start  = gr.Button("下一题", variant="primary")
+                        grammar_topic  = gr.Textbox(label="语法点", interactive=False)
+                        grammar_level  = gr.Textbox(label="等级", interactive=False)
 
                     with gr.Column(scale=2):
-                        grammar_question = gr.Textbox(label="题目", interactive=False, lines=2)
-                        grammar_options = gr.Radio(choices=[], label="选项", visible=False)
-                        grammar_input = gr.Textbox(label="填空答案", visible=False)
-                        grammar_submit = gr.Button("提交", visible=False)
-                        grammar_result = gr.Textbox(label="结果", interactive=False)
-                        grammar_explanation = gr.Textbox(label="解析", interactive=False, lines=4)
+                        grammar_question   = gr.Textbox(label="题目", interactive=False, lines=2)
+                        grammar_options    = gr.Radio(choices=[], label="选项", visible=False)
+                        grammar_input      = gr.Textbox(label="填空答案", visible=False)
+                        grammar_submit     = gr.Button("提交", visible=False)
+                        grammar_result     = gr.Textbox(label="结果", interactive=False)
+                        grammar_explanation = gr.Textbox(
+                            label="解析", interactive=False, lines=4
+                        )
 
+                # -----------------------------------------------------------------
+                # generate_grammar_question（修复：返回 qtype 并同步 state）
+                # -----------------------------------------------------------------
                 def generate_grammar_question(settings):
                     """生成语法题"""
                     questions = DATA_CACHE["grammar"]
                     if not questions:
                         return (
-                            "暂无题目",
-                            "", "",
+                            "暂无题目", "", "",
                             gr.update(visible=False),
                             gr.update(visible=False),
                             gr.update(visible=False),
-                            None,
-                            ""
+                            None, "", None
                         )
 
-                    # 过滤等级
                     level = settings["target_level"]
                     level_qs = (
                         [q for q in questions if q["level"] in [level, "A1", "A2"]]
                         if level == "B1" else questions
                     )
-
                     if not level_qs:
                         return (
-                            "该等级暂无题目",
-                            "", "",
+                            "该等级暂无题目", "", "",
                             gr.update(visible=False),
                             gr.update(visible=False),
                             gr.update(visible=False),
-                            None,
-                            ""
+                            None, "", None
                         )
 
                     q = random.choice(level_qs)
+                    qtype = q.get("question_type", "single_choice")
 
-                    if q["question_type"] == "single_choice":
+                    if qtype == "single_choice":
                         return (
-                            q["grammar_topic"],
-                            q["level"],
-                            q["question_text"],
-                            gr.update(choices=q.get("options", []), visible=True, value=None),
+                            q["grammar_topic"], q["level"], q["question_text"],
+                            gr.update(choices=q.get("options", []),
+                                      visible=True, value=None),
                             gr.update(visible=False),
                             gr.update(visible=True),
-                            q["id"],
-                            ""
+                            q["id"], "",
+                            qtype
                         )
-                    else:
+                    else:  # cloze
                         return (
-                            q["grammar_topic"],
-                            q["level"],
-                            q["question_text"],
+                            q["grammar_topic"], q["level"], q["question_text"],
                             gr.update(visible=False),
                             gr.update(visible=True, value=""),
                             gr.update(visible=True),
-                            q["id"],
-                            ""
+                            q["id"], "",
+                            qtype
                         )
 
-                def check_grammar_answer(user_answer, question_id, settings):
-                    """检查语法答案"""
+                # -----------------------------------------------------------------
+                # check_grammar_answer（修复：同时接收 Radio + Textbox，内部按 qtype 取值）
+                # -----------------------------------------------------------------
+                def check_grammar_answer(
+                    radio_val, text_val, question_id, settings, qtype
+                ):
+                    """
+                    检查语法答案。
+                    qtype == "single_choice" → 使用 radio_val
+                    qtype == "cloze"        → 使用 text_val
+                    """
                     if question_id is None:
                         return "请先开始题目", ""
 
                     questions = DATA_CACHE["grammar"]
-                    q = next((x for x in questions if x["id"] == question_id), None)
-
+                    q = next(
+                        (x for x in questions if x["id"] == question_id),
+                        None
+                    )
                     if q is None:
                         return "题目错误", ""
 
+                    # 按题型取用户答案
+                    if qtype == "cloze":
+                        user_clean = (text_val or "").lower().strip()
+                    else:
+                        user_clean = (radio_val or "").lower().strip()
+
                     correct = q["answer"].lower().strip()
-                    user_clean = (user_answer or "").lower().strip()
-
                     is_correct = user_clean == correct
-                    result = "✅ 正确！" if is_correct else f"❌ 错误。正确答案是：{q['answer']}"
 
+                    result = (
+                        "✅ 正确！"
+                        if is_correct
+                        else f"❌ 错误。正确答案是：{q['answer']}"
+                    )
                     explanation = get_explanation_display(
                         q.get("explanation_zh", ""),
                         q.get("explanation_en", ""),
@@ -919,20 +1015,26 @@ def create_app():
                     outputs=[
                         grammar_topic, grammar_level, grammar_question,
                         grammar_options, grammar_input, grammar_submit,
-                        current_grammar_id, grammar_result
+                        current_grammar_id, grammar_result,
+                        current_grammar_qtype,
                     ]
                 )
 
+                # 修复：同时传入 Radio 和 Textbox
                 grammar_submit.click(
                     check_grammar_answer,
-                    inputs=[grammar_options, current_grammar_id, settings_state],
+                    inputs=[
+                        grammar_options, grammar_input,
+                        current_grammar_id, settings_state,
+                        current_grammar_qtype
+                    ],
                     outputs=[grammar_result, grammar_explanation]
                 )
 
         # 页脚
         gr.Markdown("""
         ---
-        *法语拐杖 v0.2 | SR-driven learning | 本地开发版*
+        *法语拐杖 v0.3 | SR-driven + persistence | 本地开发版*
         """)
 
     return app
