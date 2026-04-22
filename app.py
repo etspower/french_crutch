@@ -302,8 +302,13 @@ def create_app():
                 gr.Markdown("### 💾 数据管理")
 
                 with gr.Row():
-                    export_btn  = gr.DownloadButton(
-                        label="📤 导出学习进度",
+                    # [修复 1] 拆分 DownloadButton 为两步
+                    prepare_export_btn = gr.Button(
+                        "📦 生成并准备导出", size="sm"
+                    )
+                    export_btn = gr.DownloadButton(
+                        label="📥 点击下载进度文件",
+                        visible=False,
                         file_types=[".json"], size="sm"
                     )
                     import_btn = gr.UploadButton(
@@ -315,22 +320,21 @@ def create_app():
                     label="导入结果", interactive=False, lines=2
                 )
 
+                # [修复 1] on_export_click 返回 gr.update 以控制 DownloadButton 显示
                 def on_export_click(sr, progress, settings):
                     try:
-                        return export_progress(sr, progress, settings)
+                        path = export_progress(sr, progress, settings)
+                        return gr.update(value=path, visible=True)
                     except Exception:
-                        return None
+                        return gr.update(visible=False)
 
-                # -- [修复 1] on_import_click：同时返回 UI 同步更新 --------------------
                 def on_import_click(file_obj):
                     sr, prog, sett, msg = import_progress(file_obj)
                     if sr is None:
-                        # 解析失败：State 置 None，UI 保持不变
                         return (
                             None, None, None, msg,
                             gr.update(), gr.update(), gr.update()
                         )
-                    # 解析成功：同步 UI 三件套 + State 元组
                     return (
                         sr, prog, sett, msg,
                         gr.update(value=sett["language_mode"]),
@@ -338,7 +342,8 @@ def create_app():
                         gr.update(value=sett.get("daily_new_words", 10)),
                     )
 
-                export_btn.click(
+                # [修复 1] 绑定 prepare_export_btn 而不是 export_btn
+                prepare_export_btn.click(
                     on_export_click,
                     inputs=[sr_state, daily_progress, settings_state],
                     outputs=[export_btn]
@@ -452,7 +457,6 @@ def create_app():
                     level_df    = _filter_level(lexicon, level)
                     total_level = len(level_df)
 
-                    # 干净统计（直接引用 sr_state）
                     started = sum(
                         1 for wid in level_df["id"].astype(str)
                         if wid in sr
@@ -484,7 +488,6 @@ def create_app():
 
                 # -----------------------------------------------------------------
                 # generate_vocab_question
-                # [修复 2] 所有 return 均移除末尾多余的 None
                 # -----------------------------------------------------------------
                 def generate_vocab_question(mode, settings, sr_state_val, daily_progress_val):
                     today_str            = datetime.now().strftime("%Y-%m-%d")
@@ -504,7 +507,6 @@ def create_app():
                     level       = settings["target_level"]
                     level_words = _filter_level(lexicon, level)
 
-                    # 优先级 1：复习词
                     due_ids      = get_due_words(sr_state_val, today_str)
                     due_in_level = [
                         wid for wid in due_ids
@@ -525,7 +527,6 @@ def create_app():
                         word_id   = chosen_id
                         word_type = "review"
                     else:
-                        # 优先级 2：新词
                         new_candidates = _get_new_word_candidates(
                             level_words, sr_state_val,
                             settings["daily_new_words"],
@@ -542,7 +543,6 @@ def create_app():
                             daily_progress_val["new_words_today"] += 1
                             word_type = "new"
                         else:
-                            # 优先级 3：完成 ← 移除末尾多余的 None
                             return (
                                 "🎉 恭喜！今日学习任务已完成\n\n"
                                 "✅ 新词目标达成\n"
@@ -573,7 +573,6 @@ def create_app():
 
                         question = f"{type_tag}【{row['pos']}】{row['lemma']}"
 
-                        # ← 移除末尾多余的 None
                         return (
                             question,
                             gr.update(choices=options, visible=True, value=None),
@@ -587,7 +586,6 @@ def create_app():
                         meaning  = get_meaning_display(row, settings["language_mode"])
                         question = f"{type_tag} 请拼写：{meaning}"
 
-                        # ← 移除末尾多余的 None
                         return (
                             question,
                             gr.update(visible=False),
@@ -632,14 +630,12 @@ def create_app():
 
                     return result, explanation, sr_state_val, daily_progress_val
 
-                # 模式切换 → 同步 vocab_mode_state
                 vocab_mode.change(
                     lambda m: m,
                     inputs=[vocab_mode],
                     outputs=[vocab_mode_state]
                 )
 
-                # -- [修复 2] start_vocab_btn.click：移除 current_grammar_qtype -------
                 start_vocab_btn.click(
                     generate_vocab_question,
                     inputs=[vocab_mode, settings_state, sr_state, daily_progress],
@@ -650,7 +646,6 @@ def create_app():
                         current_word_id,
                         sr_state, daily_progress,
                         vocab_mode_state,
-                        # ← 不再包含 current_grammar_qtype
                     ]
                 )
 
@@ -664,7 +659,6 @@ def create_app():
                     outputs=[vocab_result, vocab_explanation, sr_state, daily_progress]
                 )
 
-                # 初始化进度
                 app.load(
                     update_vocab_plan,
                     inputs=[settings_state, sr_state, daily_progress],
@@ -697,7 +691,7 @@ def create_app():
 
                 # -----------------------------------------------------------------
                 # start_dictation
-                # [修复 3] 返回末尾增加 "" 清空 dictation_input
+                # [修复 3] 成功分支返回额外两个 "" 用于清空 result/answer
                 # -----------------------------------------------------------------
                 def start_dictation(settings, sr_state_val, daily_progress_val):
                     today_str          = datetime.now().strftime("%Y-%m-%d")
@@ -705,7 +699,7 @@ def create_app():
                     lexicon            = DATA_CACHE["lexicon"]
 
                     if lexicon.empty:
-                        return "暂无词汇", None, "", sr_state_val, daily_progress_val, ""
+                        return "暂无词汇", None, "", sr_state_val, daily_progress_val, "", "", ""
 
                     level       = settings["target_level"]
                     level_words = _filter_level(lexicon, level)
@@ -728,7 +722,7 @@ def create_app():
                             "    复习词积累后即可开始听写练习。",
                             None, stats,
                             sr_state_val, daily_progress_val,
-                            ""   # ← [修复 3] 清空上一次的输入
+                            "", "", ""   # ← [修复 3] 清空输入+结果+答案
                         )
 
                     chosen_id = random.choice(due_in_level)
@@ -750,7 +744,8 @@ def create_app():
                         f"📝 当前: {row['lemma']}"
                     )
 
-                    return hint, str(chosen_id), stats, sr_state_val, daily_progress_val, ""
+                    # ← [修复 3] 成功分支返回额外两个 "" 清空 result/answer
+                    return hint, str(chosen_id), stats, sr_state_val, daily_progress_val, "", "", ""
 
                 # -----------------------------------------------------------------
                 # check_dictation
@@ -779,14 +774,16 @@ def create_app():
 
                     return result, answer, sr_state_val, daily_progress_val
 
-                # -- [修复 3] dictation_start.click：outputs 包含 dictation_input ---
+                # [修复 3] dictation_start.click：outputs 包含 result 和 answer
                 dictation_start.click(
                     start_dictation,
                     inputs=[settings_state, sr_state, daily_progress],
                     outputs=[
                         play_hint, current_word_id, dictation_stats,
                         sr_state, daily_progress,
-                        dictation_input   # ← [修复 3] 新增：清空输入框
+                        dictation_input,
+                        dictation_result,   # ← [修复 3] 新增：清空结果
+                        dictation_answer,  # ← [修复 3] 新增：清空答案
                     ]
                 )
 
@@ -826,18 +823,19 @@ def create_app():
 
                 # -----------------------------------------------------------------
                 # generate_grammar_question
-                # [修复 3] cloze 分支已有 gr.update(value="")，确保填空框清空
+                # [修复 2] 所有 return 末尾增加 "" 清空 grammar_explanation
                 # -----------------------------------------------------------------
                 def generate_grammar_question(settings):
                     questions = DATA_CACHE["grammar"]
 
                     if not questions:
+                        # ← [修复 2] 末尾加 "" 清空解析
                         return (
                             "暂无题目", "", "",
                             gr.update(visible=False),
                             gr.update(visible=False),
                             gr.update(visible=False),
-                            None, "", None
+                            None, "", None, ""
                         )
 
                     level = settings["target_level"]
@@ -846,33 +844,36 @@ def create_app():
                         if level == "B1" else questions
                     )
                     if not level_qs:
+                        # ← [修复 2] 末尾加 "" 清空解析
                         return (
                             "该等级暂无题目", "", "",
                             gr.update(visible=False),
                             gr.update(visible=False),
                             gr.update(visible=False),
-                            None, "", None
+                            None, "", None, ""
                         )
 
                     q      = random.choice(level_qs)
                     qtype  = q.get("question_type", "single_choice")
 
                     if qtype == "single_choice":
+                        # ← [修复 2] 末尾加 "" 清空解析
                         return (
                             q["grammar_topic"], q["level"], q["question_text"],
                             gr.update(choices=q.get("options", []),
                                       visible=True, value=None),
                             gr.update(visible=False),
                             gr.update(visible=True),
-                            q["id"], "", qtype
+                            q["id"], "", qtype, ""
                         )
-                    else:   # cloze ← 已有 gr.update(value="")，逻辑闭环
+                    else:
+                        # ← [修复 2] 末尾加 "" 清空解析
                         return (
                             q["grammar_topic"], q["level"], q["question_text"],
                             gr.update(visible=False),
-                            gr.update(visible=True, value=""),   # ← 清空填空框
+                            gr.update(visible=True, value=""),
                             gr.update(visible=True),
-                            q["id"], "", qtype
+                            q["id"], "", qtype, ""
                         )
 
                 # -----------------------------------------------------------------
@@ -911,6 +912,7 @@ def create_app():
 
                     return result, explanation
 
+                # [修复 2] grammar_start.click：outputs 加入 grammar_explanation
                 grammar_start.click(
                     generate_grammar_question,
                     inputs=[settings_state],
@@ -919,6 +921,7 @@ def create_app():
                         grammar_options, grammar_input, grammar_submit,
                         current_grammar_id, grammar_result,
                         current_grammar_qtype,
+                        grammar_explanation,  # ← [修复 2] 新增：清空解析
                     ]
                 )
 
@@ -935,7 +938,7 @@ def create_app():
         # 页脚
         gr.Markdown("""
         ---
-        *法语拐杖 v0.4 | SR-driven + persistence | 本地开发版*
+        *法语拐杖 v0.5 | UI polish | 本地开发版*
         """)
 
     return app
