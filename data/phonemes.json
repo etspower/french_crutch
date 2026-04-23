@@ -2,30 +2,30 @@
   {
     "phoneme_id": "p01",
     "symbol": "/a/",
-    "description_zh": "开前不圆唇元音，口张大，舌位最低，类似中文"啊"",
+    "description_zh": "开前不圆唇元音，口张大，舌位最低，类似中文“啊”",
     "description_en": "Open front unrounded vowel; mouth wide open, tongue lowest position, similar to English 'ah'",
     "mouth_shape_note": "嘴巴大张，舌头平放，嘴唇不圆",
-    "similar_sound_zh": "类似中文"啊"（a）",
+    "similar_sound_zh": "类似中文“啊”（a）",
     "similar_sound_en": "Similar to English 'ah' in 'father'",
     "audio_files": ["a_open_1.mp3"]
   },
   {
     "phoneme_id": "p02",
     "symbol": "/e/",
-    "description_zh": "闭前不圆唇元音，嘴角向两边拉开，类似中文"诶"但更紧",
+    "description_zh": "闭前不圆唇元音，嘴角向两边拉开，类似中文“诶”但更紧",
     "description_en": "Close-mid front unrounded vowel; lips spread, similar to English 'ay' but shorter",
     "mouth_shape_note": "嘴角微拉，舌尖抵下齿",
-    "similar_sound_zh": "类似中文"诶"（éi）但更短促",
+    "similar_sound_zh": "类似中文“诶”（éi）但更短促",
     "similar_sound_en": "Similar to 'ay' in 'say' but shorter and without glide",
     "audio_files": ["e_close_mid_1.mp3"]
   },
   {
     "phoneme_id": "p03",
     "symbol": "/i/",
-    "description_zh": "闭前不圆唇元音，嘴角紧拉，类似中文"衣"",
+    "description_zh": "闭前不圆唇元音，嘴角紧拉，类似中文“衣”",
     "description_en": "Close front unrounded vowel; lips tightly spread",
     "mouth_shape_note": "嘴角用力向两侧拉，舌尖抵下齿",
-    "similar_sound_zh": "类似中文"衣"（yī）",
+    "similar_sound_zh": "类似中文“衣”（yī）",
     "similar_sound_en": "Similar to 'ee' in 'see'",
     "audio_files": ["i_close_1.mp3"]
   },
@@ -35,34 +35,34 @@
     "description_zh": "闭中后圆唇元音，嘴唇圆而略突出",
     "description_en": "Close-mid back rounded vowel; lips rounded and slightly protruded",
     "mouth_shape_note": "嘴唇圆成小圈，略向前突出",
-    "similar_sound_zh": "类似中文"哦"（ó）但嘴唇更圆",
+    "similar_sound_zh": "类似中文“哦”（ó）但嘴唇更圆",
     "similar_sound_en": "Similar to 'o' in 'go' but shorter and purer",
     "audio_files": ["o_close_mid_1.mp3"]
   },
   {
     "phoneme_id": "p05",
     "symbol": "/u/",
-    "description_zh": "闭后圆唇元音，嘴唇紧圆前突，类似中文"乌"",
+    "description_zh": "闭后圆唇元音，嘴唇紧圆前突，类似中文“乌”",
     "description_en": "Close back rounded vowel; lips tightly rounded and protruded",
     "mouth_shape_note": "嘴唇紧圆前突，如吹口哨",
-    "similar_sound_zh": "类似中文"乌"（wū）",
+    "similar_sound_zh": "类似中文“乌”（wū）",
     "similar_sound_en": "Similar to 'oo' in 'food'",
     "audio_files": ["u_close_1.mp3"]
   },
   {
     "phoneme_id": "p06",
     "symbol": "/ɛ̃/",
-    "description_zh": "鼻化开前不圆唇元音，气流从口鼻同时出，类似"昂"但前鼻",
+    "description_zh": "鼻化开前不圆唇元音，气流从口鼻同时出，类似“昂”但前鼻",
     "description_en": "Nasal open-mid front unrounded vowel; air flows through nose and mouth simultaneously",
     "mouth_shape_note": "嘴巴半张，软腭下降让气流经鼻腔",
-    "similar_sound_zh": "无直接对应，类似"安"但去掉尾音/n/",
+    "similar_sound_zh": "无直接对应，类似“安”但去掉尾音/n/",
     "similar_sound_en": "No English equivalent; like 'an' in 'can't' (British) but without final consonant",
     "audio_files": []
   },
   {
     "phoneme_id": "p07",
     "symbol": "/ʁ/",
-    "description_zh": "小舌擦音，法语标志性"r"音，喉咙深处振动",
+    "description_zh": "小舌擦音，法语标志性“r”音，喉咙深处振动",
     "description_en": "Uvular fricative; the iconic French 'r', produced deep in the throat",
     "mouth_shape_note": "舌根后缩接近小舌，气流摩擦通过",
     "similar_sound_zh": "无对应，类似轻咳或漱口声",
@@ -75,7 +75,7 @@
     "description_zh": "闭前圆唇元音，说/i/的同时圆唇，法语特有",
     "description_en": "Close front rounded vowel; say /i/ while rounding lips; unique to French",
     "mouth_shape_note": "舌位如/i/但嘴唇圆如/u/，法语的标志音",
-    "similar_sound_zh": "无对应，先发"衣"再圆唇",
+    "similar_sound_zh": "无对应，先发“衣”再圆唇",
     "similar_sound_en": "No English equivalent; say 'ee' then round your lips tightly",
     "audio_files": []
   }
