@@ -309,7 +309,7 @@ def create_app():
                     export_btn = gr.DownloadButton(
                         label="📥 点击下载进度文件",
                         visible=False,
-                        file_types=[".json"], size="sm"
+                        size="sm"
                     )
                     import_btn = gr.UploadButton(
                         label="📥 导入学习进度",
