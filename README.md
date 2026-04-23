@@ -1,3 +1,14 @@
+---
+title: French Crutch
+emoji: 🇫🇷
+colorFrom: blue
+colorTo: red
+sdk: gradio
+sdk_version: 4.20.0
+app_file: app.py
+pinned: false
+---
+
 # 🇫🇷 法语拐杖 French Crutch
 
 为法语 0 基础自学者设计的 CEFR B1-B2 学习工具，基于 Gradio 构建。
