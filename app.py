@@ -196,38 +196,54 @@ def import_progress(file_obj):
     if file_obj is None:
         return None, None, None, "❌ 未选择文件"
 
+    payload = None
     try:
-        if isinstance(file_obj, dict):
-            path = file_obj.get("name")
-        else:
-            path = str(file_obj)
+        # First try to process it as a file-like object
+        if hasattr(file_obj, "seek") and hasattr(file_obj, "read"):
+            file_obj.seek(0)
+            payload = json.load(file_obj)
+    except Exception:
+        pass
 
-        if not path or not os.path.exists(path):
-            return None, None, None, "❌ 文件不存在或路径无效"
+    if payload is None:
+        try:
+            if isinstance(file_obj, dict):
+                path = file_obj.get("name") or file_obj.get("file")
+            else:
+                path = str(file_obj)
 
-        with open(path, "r", encoding="utf-8") as fh:
-            payload = json.load(fh)
+            if not path or not os.path.exists(path):
+                return None, None, None, "❌ 文件不存在或路径无效"
 
-        sr_state       = payload.get("sr_state", {})
-        daily_progress = payload.get("daily_progress", DEFAULT_DAILY_PROGRESS.copy())
-        settings       = payload.get("settings", DEFAULT_SETTINGS.copy())
+            with open(path, "r", encoding="utf-8") as fh:
+                payload = json.load(fh)
+        except json.JSONDecodeError:
+            return None, None, None, "❌ 文件不是有效的 JSON 格式"
+        except Exception as exc:
+            return None, None, None, f"❌ 导入失败: {exc}"
 
-        if not isinstance(sr_state, dict):
-            return None, None, None, "❌ sr_state 格式错误"
-        if not isinstance(daily_progress, dict):
-            return None, None, None, "❌ daily_progress 格式错误"
+    if not isinstance(payload, dict):
+        return None, None, None, "❌ 文件内容格式不正确"
 
-        word_count = len(sr_state)
-        msg = (f"✅ 导入成功！\n"
-               f"📚 已加载 {word_count} 条学习记录\n"
-               f"📅 上次学习日期: {daily_progress.get('date', '未知')}")
+    sr_state       = payload.get("sr_state", {})
+    daily_progress = payload.get("daily_progress", DEFAULT_DAILY_PROGRESS.copy())
 
-        return sr_state, daily_progress, settings, msg
+    if not isinstance(sr_state, dict):
+        return None, None, None, "❌ sr_state 格式错误"
+    if not isinstance(daily_progress, dict):
+        return None, None, None, "❌ daily_progress 格式错误"
 
-    except json.JSONDecodeError:
-        return None, None, None, "❌ 文件不是有效的 JSON 格式"
-    except Exception as exc:
-        return None, None, None, f"❌ 导入失败: {exc}"
+    settings_from_file = payload.get("settings", {})
+    if not isinstance(settings_from_file, dict):
+        settings_from_file = {}
+    settings = {**DEFAULT_SETTINGS, **settings_from_file}
+
+    word_count = len(sr_state)
+    msg = (f"✅ 导入成功！\n"
+           f"📚 已加载 {word_count} 条学习记录\n"
+           f"📅 上次学习日期: {daily_progress.get('date', '未知')}")
+
+    return sr_state, daily_progress, settings, msg
 
 # =============================================================================
 # Gradio UI
@@ -351,7 +367,7 @@ def create_app():
 
                 import_btn.upload(
                     on_import_click,
-                    inputs=[import_btn],
+                    inputs=[],
                     outputs=[
                         sr_state, daily_progress, settings_state, import_msg,
                         language_mode, target_level, daily_new_words
@@ -384,6 +400,8 @@ def create_app():
                         audio_player    = gr.Audio(label="发音", type="filepath")
                         audio_status    = gr.Textbox(label="音频状态", interactive=False)
 
+                        phoneme_symbol_state = gr.State("")
+
                         def show_phoneme(symbol):
                             p = phoneme_data_map.get(symbol, {})
                             audio_path  = None
@@ -408,8 +426,12 @@ def create_app():
 
                         for btn, symbol in phoneme_buttons:
                             btn.click(
+                                lambda s=symbol: s,
+                                inputs=[],
+                                outputs=[phoneme_symbol_state]
+                            ).then(
                                 show_phoneme,
-                                inputs=[gr.State(symbol)],
+                                inputs=[phoneme_symbol_state],
                                 outputs=[
                                     phoneme_symbol, phoneme_desc, phoneme_mouth,
                                     phoneme_similar, audio_player, audio_status
@@ -947,6 +969,7 @@ def create_app():
 # 启动入口
 # =============================================================================
 
+app = create_app()
+
 if __name__ == "__main__":
-    app = create_app()
-    app.launch(server_name="0.0.0.0", server_port=7860, share=False)
+    app.launch(server_name="0.0.0.0", server_port=7860)
