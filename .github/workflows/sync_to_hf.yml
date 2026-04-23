@@ -1,0 +1,26 @@
+name: Sync to Hugging Face Space
+
+on:
+  push:
+    branches: [main] # 当 main 分支有代码推送时触发
+  workflow_dispatch: # 允许你在 GitHub Actions 页面手动点击运行
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # 获取完整历史记录
+          lfs: true      # 如果有大文件，启用 LFS
+
+      - name: Push to Hugging Face Hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # 配置 git
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          # 强制推送到你的 Hugging Face Space
+          git push --force https://etspower:$HF_TOKEN@huggingface.co/spaces/etspower/french_crutch main
