@@ -8,8 +8,10 @@ import json
 import random
 import os
 import tempfile
-from datetime import datetime, timedelta
+import unicodedata
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from gtts import gTTS
 
 import gradio as gr
 import pandas as pd
@@ -48,7 +50,9 @@ def load_data():
     data = {}
 
     if LEXICON_PATH.exists():
-        data["lexicon"] = pd.read_csv(LEXICON_PATH)
+        df = pd.read_csv(LEXICON_PATH)
+        df.fillna("", inplace=True)
+        data["lexicon"] = df
     else:
         data["lexicon"] = pd.DataFrame(columns=[
             "id", "lemma", "pos", "level",
@@ -114,14 +118,14 @@ def update_sr_status(sr_state, word_id, quality):
 
     state["review_count"] += 1
     state["next_review_date"] = (
-        datetime.now() + timedelta(days=state["interval_days"])
+        datetime.now(timezone(timedelta(hours=8))) + timedelta(days=state["interval_days"])
     ).strftime("%Y-%m-%d")
 
     return sr_state
 
 def get_due_words(sr_state, today=None):
     if today is None:
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
     return [
         wid for wid, state in sr_state.items()
         if (state["next_review_date"]
@@ -164,10 +168,14 @@ def get_explanation_display(explanation_zh, explanation_en, mode):
     return f"【中文】{explanation_zh}\n【English】{explanation_en}"
 
 def _cross_day_reset(progress):
-    today_str = datetime.now().strftime("%Y-%m-%d")
+    today_str = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
     if progress["date"] != today_str:
         return {"date": today_str, "new_words_today": 0, "reviewed_today": 0}
     return progress
+
+def strip_accents(text):
+    if not text: return ""
+    return "".join(c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn")
 
 # =============================================================================
 # 进度持久化
@@ -176,17 +184,18 @@ def _cross_day_reset(progress):
 def export_progress(sr_state, daily_progress, settings):
     payload = {
         "version":        1,
-        "exported_at":    datetime.now().isoformat(),
+        "exported_at":    datetime.now(timezone(timedelta(hours=8))).isoformat(),
         "sr_state":       sr_state,
         "daily_progress": daily_progress,
         "settings":       settings,
     }
     json_str = json.dumps(payload, ensure_ascii=False, indent=2)
 
-    fd, tmp_path = tempfile.mkstemp(suffix=".json", prefix="french_crutch_progress_")
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(json_str)
+        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".json", prefix="french_crutch_progress_", mode="w", encoding="utf-8")
+        tmp_file.write(json_str)
+        tmp_file.close()
+        tmp_path = tmp_file.name
     except Exception:
         raise
 
@@ -463,6 +472,8 @@ def create_app():
                         vocab_submit     = gr.Button("提交答案", visible=False)
                         vocab_result     = gr.Textbox(label="结果",  interactive=False)
                         vocab_explanation = gr.Textbox(label="解析", interactive=False, lines=3)
+                        vocab_audio       = gr.Audio(label="发音", interactive=False, autoplay=True, visible=False)
+                        vocab_audio_btn   = gr.Button("📢 播放发音", visible=False)
 
                 # -----------------------------------------------------------------
                 # update_vocab_plan
@@ -602,7 +613,8 @@ def create_app():
                             gr.update(visible=True),
                             "", "",
                             word_id,
-                            sr_state_val, daily_progress_val, mode
+                            sr_state_val, daily_progress_val, mode,
+                            gr.update(visible=False) # vocab_audio_btn
                         )
                     else:
                         meaning  = get_meaning_display(row, settings["language_mode"])
@@ -615,7 +627,8 @@ def create_app():
                             gr.update(visible=True),
                             "", "",
                             word_id,
-                            sr_state_val, daily_progress_val, mode
+                            sr_state_val, daily_progress_val, mode,
+                            gr.update(visible=False) # vocab_audio_btn
                         )
 
                 # -----------------------------------------------------------------
@@ -636,21 +649,53 @@ def create_app():
                         is_correct = user_answer == get_meaning_display(
                             row, settings["language_mode"]
                         )
+                        is_almost_correct = False
                     else:
                         user_clean = (user_answer or "").lower().strip()
-                        is_correct = user_clean == row["lemma"].lower().strip()
+                        correct_ans = row["lemma"].lower().strip()
+                        if user_clean == correct_ans:
+                            is_correct = True
+                            is_almost_correct = False
+                        elif strip_accents(user_clean) == strip_accents(correct_ans):
+                            is_correct = False
+                            is_almost_correct = True
+                        else:
+                            is_correct = False
+                            is_almost_correct = False
 
-                    quality                = 5 if is_correct else (0 if mode == "spelling" else 3)
+                    if mode == "choice":
+                        quality = 5 if is_correct else 3
+                    else:
+                        quality = 5 if is_correct else (4 if is_almost_correct else 0)
+
                     sr_state_val           = update_sr_status(sr_state_val, word_id, quality)
                     daily_progress_val     = _cross_day_reset(daily_progress_val)
                     daily_progress_val["reviewed_today"] += 1
 
-                    result    = "✅ 正确！" if is_correct else (
-                        f"❌ 错误。正确答案是：{row['lemma']}"
-                    )
+                    if is_correct:
+                        result = "✅ 正确！"
+                    elif is_almost_correct:
+                        result = f"✅ 几乎正确（注意重音符号：正确拼写是 {row['lemma']}）"
+                    else:
+                        result = f"❌ 错误。正确答案是：{row['lemma']}"
+                    
                     explanation = f"例句：{row['example_fr']}\n{row['example_zh']}"
 
-                    return result, explanation, sr_state_val, daily_progress_val
+                    return result, explanation, sr_state_val, daily_progress_val, gr.update(visible=True)
+
+                def play_vocab_audio(word_id):
+                    if not word_id: return None
+                    lexicon = DATA_CACHE["lexicon"]
+                    row = lexicon[lexicon["id"].astype(str) == str(word_id)].iloc[0]
+                    lemma = row["lemma"]
+                    try:
+                        tts = gTTS(text=lemma, lang="fr")
+                        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3", prefix="french_crutch_vocab_")
+                        tts.save(tmp_file.name)
+                        tmp_file.close()
+                        return tmp_file.name
+                    except:
+                        return None
 
                 vocab_mode.change(
                     lambda m: m,
@@ -668,6 +713,7 @@ def create_app():
                         current_word_id,
                         sr_state, daily_progress,
                         vocab_mode_state,
+                        vocab_audio_btn,
                     ]
                 )
 
@@ -678,7 +724,13 @@ def create_app():
                         vocab_mode_state, current_word_id,
                         settings_state, sr_state, daily_progress
                     ],
-                    outputs=[vocab_result, vocab_explanation, sr_state, daily_progress]
+                    outputs=[vocab_result, vocab_explanation, sr_state, daily_progress, vocab_audio_btn]
+                )
+
+                vocab_audio_btn.click(
+                    play_vocab_audio,
+                    inputs=[current_word_id],
+                    outputs=[vocab_audio]
                 )
 
                 app.load(
@@ -696,6 +748,7 @@ def create_app():
                 with gr.Row():
                     with gr.Column(scale=1):
                         dictation_start = gr.Button("开始听写", variant="primary")
+                        dictation_replay = gr.Button("🔄 重听", variant="secondary")
                         play_hint = gr.Textbox(
                             label="提示",
                             value="点击开始，然后输入你听到的单词",
@@ -704,6 +757,7 @@ def create_app():
                         dictation_stats = gr.Textbox(
                             label="听写统计", interactive=False, lines=3
                         )
+                        dictation_audio = gr.Audio(label="听音", interactive=False, autoplay=True, visible=False)
 
                     with gr.Column(scale=2):
                         dictation_input   = gr.Textbox(label="输入你听到的单词")
@@ -721,7 +775,7 @@ def create_app():
                     lexicon            = DATA_CACHE["lexicon"]
 
                     if lexicon.empty:
-                        return "暂无词汇", None, "", sr_state_val, daily_progress_val, "", "", ""
+                        return "暂无词汇", None, "", sr_state_val, daily_progress_val, "", "", "", gr.update(visible=False)
 
                     level       = settings["target_level"]
                     level_words = _filter_level(lexicon, level)
@@ -744,7 +798,8 @@ def create_app():
                             "    复习词积累后即可开始听写练习。",
                             None, stats,
                             sr_state_val, daily_progress_val,
-                            "", "", ""   # ← [修复 3] 清空输入+结果+答案
+                            "", "", "",  # ← [修复 3] 清空输入+结果+答案
+                            gr.update(visible=False)
                         )
 
                     chosen_id = random.choice(due_in_level)
@@ -766,8 +821,18 @@ def create_app():
                         f"📝 当前: {row['lemma']}"
                     )
 
+                    audio_path = None
+                    try:
+                        tts = gTTS(text=row["lemma"], lang="fr")
+                        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3", prefix="french_crutch_dictation_")
+                        tts.save(tmp_file.name)
+                        tmp_file.close()
+                        audio_path = tmp_file.name
+                    except Exception:
+                        pass
+
                     # ← [修复 3] 成功分支返回额外两个 "" 清空 result/answer
-                    return hint, str(chosen_id), stats, sr_state_val, daily_progress_val, "", "", ""
+                    return hint, str(chosen_id), stats, sr_state_val, daily_progress_val, "", "", "", gr.update(value=audio_path, visible=True)
 
                 # -----------------------------------------------------------------
                 # check_dictation
@@ -783,14 +848,28 @@ def create_app():
                     row          = lexicon[lexicon["id"].astype(str) == str(word_id)].iloc[0]
                     correct      = row["lemma"].lower().strip()
                     user_clean   = (user_input or "").lower().strip()
-                    is_correct   = user_clean == correct
+                    
+                    if user_clean == correct:
+                        is_correct = True
+                        is_almost_correct = False
+                    elif strip_accents(user_clean) == strip_accents(correct):
+                        is_correct = False
+                        is_almost_correct = True
+                    else:
+                        is_correct = False
+                        is_almost_correct = False
 
-                    quality              = 5 if is_correct else 2
+                    quality              = 5 if is_correct else (4 if is_almost_correct else 2)
                     sr_state_val         = update_sr_status(sr_state_val, word_id, quality)
                     daily_progress_val   = _cross_day_reset(daily_progress_val)
                     daily_progress_val["reviewed_today"] += 1
 
-                    result = "✅ 正确！" if is_correct else "❌ 错误"
+                    if is_correct:
+                        result = "✅ 正确！"
+                    elif is_almost_correct:
+                        result = f"✅ 几乎正确（注意重音符号：正确拼写是 {row['lemma']}）"
+                    else:
+                        result = "❌ 错误"
                     answer = (f"{row['lemma']} - "
                               f"{get_meaning_display(row, settings['language_mode'])}")
 
@@ -806,6 +885,7 @@ def create_app():
                         dictation_input,
                         dictation_result,   # ← [修复 3] 新增：清空结果
                         dictation_answer,  # ← [修复 3] 新增：清空答案
+                        dictation_audio,
                     ]
                 )
 
@@ -819,6 +899,11 @@ def create_app():
                         dictation_result, dictation_answer,
                         sr_state, daily_progress
                     ]
+                )
+                dictation_replay.click(
+                    lambda aud: aud,
+                    inputs=[dictation_audio],
+                    outputs=[dictation_audio]
                 )
 
             # =========================================================================
@@ -956,6 +1041,44 @@ def create_app():
                     ],
                     outputs=[grammar_result, grammar_explanation]
                 )
+            # =========================================================================
+            # Tab 6: 字母表
+            # =========================================================================
+            with gr.TabItem("🔤 字母表"):
+                gr.Markdown("### 法语 26 个字母发音")
+
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        gr.Markdown("**点击字母播放发音：**")
+                        alphabet_buttons = []
+                        for i in range(26):
+                            letter = chr(ord('A') + i)
+                            btn = gr.Button(letter, size="sm", elem_classes=["phoneme-btn"])
+                            alphabet_buttons.append((btn, letter))
+
+                    with gr.Column(scale=2):
+                        alphabet_player = gr.Audio(label="发音", type="filepath", autoplay=True)
+                        alphabet_status = gr.Textbox(label="音频状态", interactive=False)
+
+                        def play_alphabet(letter):
+                            audio_path = None
+                            status_msg = "音频待补全"
+                            filename = f"letter_{letter}.mp3"
+                            full_path = ASSETS_DIR / "audio" / "alphabet" / filename
+                            if full_path.exists():
+                                audio_path = str(full_path)
+                                status_msg = f"播放: {filename}"
+                            else:
+                                status_msg = f"音频文件缺失: {filename}"
+                            
+                            return audio_path, status_msg
+                            
+                        for btn, letter in alphabet_buttons:
+                            btn.click(
+                                lambda l=letter: play_alphabet(l),
+                                inputs=[],
+                                outputs=[alphabet_player, alphabet_status]
+                            )
 
         # 页脚
         gr.Markdown("""

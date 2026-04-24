@@ -1,82 +1,382 @@
 [
   {
     "phoneme_id": "p01",
-    "symbol": "/a/",
-    "description_zh": "开前不圆唇元音，口张大，舌位最低，类似中文“啊”",
-    "description_en": "Open front unrounded vowel; mouth wide open, tongue lowest position, similar to English 'ah'",
-    "mouth_shape_note": "嘴巴大张，舌头平放，嘴唇不圆",
+    "symbol": "[a]",
+    "description_zh": "开元音a",
+    "description_en": "Open front unrounded vowel",
+    "mouth_shape_note": "口张大，舌位最低，类似中文“啊”",
     "similar_sound_zh": "类似中文“啊”（a）",
     "similar_sound_en": "Similar to English 'ah' in 'father'",
-    "audio_files": ["a_open_1.mp3"]
+    "audio_files": ["01_a_open.mp3"]
   },
   {
     "phoneme_id": "p02",
-    "symbol": "/e/",
-    "description_zh": "闭前不圆唇元音，嘴角向两边拉开，类似中文“诶”但更紧",
-    "description_en": "Close-mid front unrounded vowel; lips spread, similar to English 'ay' but shorter",
-    "mouth_shape_note": "嘴角微拉，舌尖抵下齿",
-    "similar_sound_zh": "类似中文“诶”（éi）但更短促",
-    "similar_sound_en": "Similar to 'ay' in 'say' but shorter and without glide",
-    "audio_files": ["e_close_mid_1.mp3"]
+    "symbol": "[ɑ]",
+    "description_zh": "开元音ɑ",
+    "description_en": "Open back unrounded vowel",
+    "mouth_shape_note": "口张大，舌位最低但偏后",
+    "similar_sound_zh": "类似中文“啊”但更靠后",
+    "similar_sound_en": "Similar to English 'ah' but more back",
+    "audio_files": ["02_ɑ_open_back.mp3"]
   },
   {
     "phoneme_id": "p03",
-    "symbol": "/i/",
-    "description_zh": "闭前不圆唇元音，嘴角紧拉，类似中文“衣”",
-    "description_en": "Close front unrounded vowel; lips tightly spread",
-    "mouth_shape_note": "嘴角用力向两侧拉，舌尖抵下齿",
-    "similar_sound_zh": "类似中文“衣”（yī）",
-    "similar_sound_en": "Similar to 'ee' in 'see'",
-    "audio_files": ["i_close_1.mp3"]
+    "symbol": "[e]",
+    "description_zh": "闭前元音e",
+    "description_en": "Close-mid front unrounded vowel",
+    "mouth_shape_note": "嘴角向两边拉开，类似中文“诶”但更紧",
+    "similar_sound_zh": "类似中文“诶”（éi）但更短促",
+    "similar_sound_en": "Similar to 'ay' in 'say' but shorter",
+    "audio_files": ["03_e_close-mid_front.mp3"]
   },
   {
     "phoneme_id": "p04",
-    "symbol": "/o/",
-    "description_zh": "闭中后圆唇元音，嘴唇圆而略突出",
-    "description_en": "Close-mid back rounded vowel; lips rounded and slightly protruded",
-    "mouth_shape_note": "嘴唇圆成小圈，略向前突出",
-    "similar_sound_zh": "类似中文“哦”（ó）但嘴唇更圆",
-    "similar_sound_en": "Similar to 'o' in 'go' but shorter and purer",
-    "audio_files": ["o_close_mid_1.mp3"]
+    "symbol": "[ɛ]",
+    "description_zh": "半开前元音ɛ",
+    "description_en": "Open-mid front unrounded vowel",
+    "mouth_shape_note": "口微张，舌尖抵下齿",
+    "similar_sound_zh": "类似英语 'bed' 中的 'e'",
+    "similar_sound_en": "Similar to 'e' in 'bed'",
+    "audio_files": ["04_ɛ_open-mid_front.mp3"]
   },
   {
     "phoneme_id": "p05",
-    "symbol": "/u/",
-    "description_zh": "闭后圆唇元音，嘴唇紧圆前突，类似中文“乌”",
-    "description_en": "Close back rounded vowel; lips tightly rounded and protruded",
-    "mouth_shape_note": "嘴唇紧圆前突，如吹口哨",
-    "similar_sound_zh": "类似中文“乌”（wū）",
-    "similar_sound_en": "Similar to 'oo' in 'food'",
-    "audio_files": ["u_close_1.mp3"]
+    "symbol": "[i]",
+    "description_zh": "闭前元音i",
+    "description_en": "Close front unrounded vowel",
+    "mouth_shape_note": "嘴角紧拉，类似中文“衣”",
+    "similar_sound_zh": "类似中文“衣”（yī）",
+    "similar_sound_en": "Similar to 'ee' in 'see'",
+    "audio_files": ["05_i_close_front.mp3"]
   },
   {
     "phoneme_id": "p06",
-    "symbol": "/ɛ̃/",
-    "description_zh": "鼻化开前不圆唇元音，气流从口鼻同时出，类似“昂”但前鼻",
-    "description_en": "Nasal open-mid front unrounded vowel; air flows through nose and mouth simultaneously",
-    "mouth_shape_note": "嘴巴半张，软腭下降让气流经鼻腔",
-    "similar_sound_zh": "无直接对应，类似“安”但去掉尾音/n/",
-    "similar_sound_en": "No English equivalent; like 'an' in 'can't' (British) but without final consonant",
-    "audio_files": []
+    "symbol": "[o]",
+    "description_zh": "闭后元音o",
+    "description_en": "Close-mid back rounded vowel",
+    "mouth_shape_note": "嘴唇圆而略突出",
+    "similar_sound_zh": "类似中文“哦”（ó）",
+    "similar_sound_en": "Similar to 'o' in 'go'",
+    "audio_files": ["06_o_close-mid_back.mp3"]
   },
   {
     "phoneme_id": "p07",
-    "symbol": "/ʁ/",
-    "description_zh": "小舌擦音，法语标志性“r”音，喉咙深处振动",
-    "description_en": "Uvular fricative; the iconic French 'r', produced deep in the throat",
-    "mouth_shape_note": "舌根后缩接近小舌，气流摩擦通过",
-    "similar_sound_zh": "无对应，类似轻咳或漱口声",
-    "similar_sound_en": "No English equivalent; similar to a gentle gargling or clearing throat sound",
-    "audio_files": []
+    "symbol": "[ɔ]",
+    "description_zh": "半开后元音ɔ",
+    "description_en": "Open-mid back rounded vowel",
+    "mouth_shape_note": "口半开，嘴唇稍微圆",
+    "similar_sound_zh": "类似英语 'dog' 中的 'o'",
+    "similar_sound_en": "Similar to 'o' in 'dog'",
+    "audio_files": ["07_ɔ_open-mid_back.mp3"]
   },
   {
     "phoneme_id": "p08",
-    "symbol": "/y/",
-    "description_zh": "闭前圆唇元音，说/i/的同时圆唇，法语特有",
-    "description_en": "Close front rounded vowel; say /i/ while rounding lips; unique to French",
-    "mouth_shape_note": "舌位如/i/但嘴唇圆如/u/，法语的标志音",
-    "similar_sound_zh": "无对应，先发“衣”再圆唇",
-    "similar_sound_en": "No English equivalent; say 'ee' then round your lips tightly",
-    "audio_files": []
+    "symbol": "[u]",
+    "description_zh": "闭后元音u",
+    "description_en": "Close back rounded vowel",
+    "mouth_shape_note": "嘴唇紧圆前突，类似中文“乌”",
+    "similar_sound_zh": "类似中文“乌”（wū）",
+    "similar_sound_en": "Similar to 'oo' in 'food'",
+    "audio_files": ["08_u_close_back.mp3"]
+  },
+  {
+    "phoneme_id": "p09",
+    "symbol": "[y]",
+    "description_zh": "闭前圆唇元音y",
+    "description_en": "Close front rounded vowel",
+    "mouth_shape_note": "说/i/的同时圆唇，类似中文“于”",
+    "similar_sound_zh": "类似中文“于”（yū）",
+    "similar_sound_en": "Like 'ee' but with rounded lips",
+    "audio_files": ["09_y_close_front_rounded.mp3"]
+  },
+  {
+    "phoneme_id": "p10",
+    "symbol": "[ø]",
+    "description_zh": "半闭前圆唇元音ø",
+    "description_en": "Close-mid front rounded vowel",
+    "mouth_shape_note": "口位如/e/但圆唇",
+    "similar_sound_zh": "无对应，发/e/时圆唇",
+    "similar_sound_en": "Like 'ay' but with rounded lips",
+    "audio_files": ["10_ø_close-mid_front_rounded.mp3"]
+  },
+  {
+    "phoneme_id": "p11",
+    "symbol": "[œ]",
+    "description_zh": "半开前圆唇元音œ",
+    "description_en": "Open-mid front rounded vowel",
+    "mouth_shape_note": "口位如/ɛ/但圆唇",
+    "similar_sound_zh": "无对应，发/ɛ/时圆唇",
+    "similar_sound_en": "Like 'e' in 'bed' but with rounded lips",
+    "audio_files": ["11_œ_open-mid_front_rounded.mp3"]
+  },
+  {
+    "phoneme_id": "p12",
+    "symbol": "[ə]",
+    "description_zh": "中央元音(模糊音)",
+    "description_en": "Mid central vowel",
+    "mouth_shape_note": "双唇微张，舌自然平放",
+    "similar_sound_zh": "类似英语 'ago' 中的 'a'",
+    "similar_sound_en": "Similar to 'a' in 'ago'",
+    "audio_files": ["12_ə_schwa.mp3"]
+  },
+  {
+    "phoneme_id": "p13",
+    "symbol": "[ɑ̃]",
+    "description_zh": "鼻化元音ɑ̃",
+    "description_en": "Nasal open back unrounded vowel",
+    "mouth_shape_note": "口位如[ɑ]但气流经鼻腔",
+    "similar_sound_zh": "类似“昂”但去掉尾音/ŋ/",
+    "similar_sound_en": "Like 'ah' but nasalized",
+    "audio_files": ["13_ɑ̃_nasal.mp3"]
+  },
+  {
+    "phoneme_id": "p14",
+    "symbol": "[ɛ̃]",
+    "description_zh": "鼻化元音ɛ̃",
+    "description_en": "Nasal open-mid front unrounded vowel",
+    "mouth_shape_note": "口位如[ɛ]但气流经鼻腔",
+    "similar_sound_zh": "类似“安”但去掉尾音/n/",
+    "similar_sound_en": "Like 'an' in 'can' but nasalized",
+    "audio_files": ["14_ɛ̃_nasal.mp3"]
+  },
+  {
+    "phoneme_id": "p15",
+    "symbol": "[ɔ̃]",
+    "description_zh": "鼻化元音ɔ̃",
+    "description_en": "Nasal open-mid back rounded vowel",
+    "mouth_shape_note": "口位如[ɔ]但气流经鼻腔",
+    "similar_sound_zh": "类似“翁”但去掉尾音/ŋ/",
+    "similar_sound_en": "Like 'oh' but nasalized",
+    "audio_files": ["15_ɔ̃_nasal.mp3"]
+  },
+  {
+    "phoneme_id": "p16",
+    "symbol": "[œ̃]",
+    "description_zh": "鼻化元音œ̃",
+    "description_en": "Nasal open-mid front rounded vowel",
+    "mouth_shape_note": "口位如[œ]但气流经鼻腔",
+    "similar_sound_zh": "无直接对应，鼻化版[œ]",
+    "similar_sound_en": "Nasalized [œ]",
+    "audio_files": ["16_œ̃_nasal.mp3"]
+  },
+  {
+    "phoneme_id": "p17",
+    "symbol": "[j]",
+    "description_zh": "半元音j(耶)",
+    "description_en": "Palatal approximant",
+    "mouth_shape_note": "舌位同/i/但极短",
+    "similar_sound_zh": "类似中文“耶”（yě）的开头",
+    "similar_sound_en": "Similar to 'y' in 'yes'",
+    "audio_files": ["17_j_yod.mp3"]
+  },
+  {
+    "phoneme_id": "p18",
+    "symbol": "[w]",
+    "description_zh": "半元音w(伍)",
+    "description_en": "Labio-velar approximant",
+    "mouth_shape_note": "舌位同/u/但极短",
+    "similar_sound_zh": "类似中文“我”（wǒ）的开头",
+    "similar_sound_en": "Similar to 'w' in 'win'",
+    "audio_files": ["18_w_wau.mp3"]
+  },
+  {
+    "phoneme_id": "p19",
+    "symbol": "[ɥ]",
+    "description_zh": "半元音ɥ(居)",
+    "description_en": "Labio-palatal approximant",
+    "mouth_shape_note": "舌位同/y/但极短",
+    "similar_sound_zh": "无对应，发/y/时迅速划向后面元音",
+    "similar_sound_en": "No English equivalent; like 'y' in 'yes' but with rounded lips",
+    "audio_files": ["19_ɥ_u-yod.mp3"]
+  },
+  {
+    "phoneme_id": "p20",
+    "symbol": "[p]",
+    "description_zh": "清塞音p",
+    "description_en": "Voiceless bilabial plosive",
+    "mouth_shape_note": "双唇紧闭，气流突然冲出",
+    "similar_sound_zh": "类似中文“坡”（pō）",
+    "similar_sound_en": "Similar to 'p' in 'spot' (unaspirated)",
+    "audio_files": ["20_p_voiceless.mp3"]
+  },
+  {
+    "phoneme_id": "p21",
+    "symbol": "[t]",
+    "description_zh": "清塞音t",
+    "description_en": "Voiceless alveolar plosive",
+    "mouth_shape_note": "舌尖抵上齿，气流突然冲出",
+    "similar_sound_zh": "类似中文“特”（tè）",
+    "similar_sound_en": "Similar to 't' in 'stop' (unaspirated)",
+    "audio_files": ["21_t_voiceless.mp3"]
+  },
+  {
+    "phoneme_id": "p22",
+    "symbol": "[k]",
+    "description_zh": "清塞音k",
+    "description_en": "Voiceless velar plosive",
+    "mouth_shape_note": "舌根抵软腭，气流突然冲出",
+    "similar_sound_zh": "类似中文“科”（kē）",
+    "similar_sound_en": "Similar to 'k' in 'skip' (unaspirated)",
+    "audio_files": ["22_k_voiceless.mp3"]
+  },
+  {
+    "phoneme_id": "p23",
+    "symbol": "[b]",
+    "description_zh": "浊塞音b",
+    "description_en": "Voiced bilabial plosive",
+    "mouth_shape_note": "双唇紧闭，声带振动",
+    "similar_sound_zh": "类似中文“波”（bō）但声带振动",
+    "similar_sound_en": "Similar to 'b' in 'boy'",
+    "audio_files": ["23_b_voiced.mp3"]
+  },
+  {
+    "phoneme_id": "p24",
+    "symbol": "[d]",
+    "description_zh": "浊塞音d",
+    "description_en": "Voiced alveolar plosive",
+    "mouth_shape_note": "舌尖抵上齿，声带振动",
+    "similar_sound_zh": "类似中文“的”（de）但声带振动",
+    "similar_sound_en": "Similar to 'd' in 'dog'",
+    "audio_files": ["24_d_voiced.mp3"]
+  },
+  {
+    "phoneme_id": "p25",
+    "symbol": "[ɡ]",
+    "description_zh": "浊塞音g",
+    "description_en": "Voiced velar plosive",
+    "mouth_shape_note": "舌根抵软腭，声带振动",
+    "similar_sound_zh": "类似中文“哥”（gē）但声带振动",
+    "similar_sound_en": "Similar to 'g' in 'go'",
+    "audio_files": ["25_ɡ_voiced.mp3"]
+  },
+  {
+    "phoneme_id": "p26",
+    "symbol": "[f]",
+    "description_zh": "清擦音f",
+    "description_en": "Voiceless labiodental fricative",
+    "mouth_shape_note": "上齿抵下唇，气流摩擦而出",
+    "similar_sound_zh": "类似中文“佛”（fó）",
+    "similar_sound_en": "Similar to 'f' in 'fine'",
+    "audio_files": ["26_f_voiceless.mp3"]
+  },
+  {
+    "phoneme_id": "p27",
+    "symbol": "[s]",
+    "description_zh": "清擦音s",
+    "description_en": "Voiceless alveolar fricative",
+    "mouth_shape_note": "舌尖抵下齿，气流摩擦而出",
+    "similar_sound_zh": "类似中文“思”（sī）",
+    "similar_sound_en": "Similar to 's' in 'see'",
+    "audio_files": ["27_s_voiceless.mp3"]
+  },
+  {
+    "phoneme_id": "p28",
+    "symbol": "[ʃ]",
+    "description_zh": "清擦音ʃ(嘘)",
+    "description_en": "Voiceless postalveolar fricative",
+    "mouth_shape_note": "双唇略突出，类似“嘘”",
+    "similar_sound_zh": "类似中文“狮”（shī）",
+    "similar_sound_en": "Similar to 'sh' in 'she'",
+    "audio_files": ["28_ʃ_voiceless.mp3"]
+  },
+  {
+    "phoneme_id": "p29",
+    "symbol": "[v]",
+    "description_zh": "浊擦音v",
+    "description_en": "Voiced labiodental fricative",
+    "mouth_shape_note": "上齿抵下唇，声带振动",
+    "similar_sound_zh": "无直接对应，发/f/时振动声带",
+    "similar_sound_en": "Similar to 'v' in 'view'",
+    "audio_files": ["29_v_voiced.mp3"]
+  },
+  {
+    "phoneme_id": "p30",
+    "symbol": "[z]",
+    "description_zh": "浊擦音z",
+    "description_en": "Voiced alveolar fricative",
+    "mouth_shape_note": "舌尖抵下齿，声带振动",
+    "similar_sound_zh": "无直接对应，发/s/时振动声带",
+    "similar_sound_en": "Similar to 'z' in 'zoo'",
+    "audio_files": ["30_z_voiced.mp3"]
+  },
+  {
+    "phoneme_id": "p31",
+    "symbol": "[ʒ]",
+    "description_zh": "浊擦音ʒ(日)",
+    "description_en": "Voiced postalveolar fricative",
+    "mouth_shape_note": "舌位同/ʃ/，声带振动",
+    "similar_sound_zh": "类似中文“日”（rì）",
+    "similar_sound_en": "Similar to 's' in 'pleasure'",
+    "audio_files": ["31_ʒ_voiced.mp3"]
+  },
+  {
+    "phoneme_id": "p32",
+    "symbol": "[m]",
+    "description_zh": "鼻音m",
+    "description_en": "Bilabial nasal",
+    "mouth_shape_note": "双唇闭拢，气流从鼻腔出",
+    "similar_sound_zh": "类似中文“摸”（mō）",
+    "similar_sound_en": "Similar to 'm' in 'me'",
+    "audio_files": ["32_m_nasal.mp3"]
+  },
+  {
+    "phoneme_id": "p33",
+    "symbol": "[n]",
+    "description_zh": "鼻音n",
+    "description_en": "Alveolar nasal",
+    "mouth_shape_note": "舌尖抵上齿龈，气流从鼻腔出",
+    "similar_sound_zh": "类似中文“讷”（nè）",
+    "similar_sound_en": "Similar to 'n' in 'no'",
+    "audio_files": ["33_n_nasal.mp3"]
+  },
+  {
+    "phoneme_id": "p34",
+    "symbol": "[ɲ]",
+    "description_zh": "鼻音ɲ(涅)",
+    "description_en": "Palatal nasal",
+    "mouth_shape_note": "舌中抬起抵硬腭",
+    "similar_sound_zh": "类似“捏”的鼻音开头",
+    "similar_sound_en": "Similar to 'ny' in 'canyon'",
+    "audio_files": ["34_ɲ_palatal_nasal.mp3"]
+  },
+  {
+    "phoneme_id": "p35",
+    "symbol": "[ŋ]",
+    "description_zh": "鼻音ŋ(昂)",
+    "description_en": "Velar nasal",
+    "mouth_shape_note": "舌根抬起抵软腭",
+    "similar_sound_zh": "类似中文“昂”（áng）的结尾",
+    "similar_sound_en": "Similar to 'ng' in 'sing'",
+    "audio_files": ["35_ŋ_velar_nasal.mp3"]
+  },
+  {
+    "phoneme_id": "p36",
+    "symbol": "[l]",
+    "description_zh": "边音l",
+    "description_en": "Alveolar lateral approximant",
+    "mouth_shape_note": "舌尖抵上齿，气流从两侧出",
+    "similar_sound_zh": "类似中文“勒”（lè）",
+    "similar_sound_en": "Similar to 'l' in 'look'",
+    "audio_files": ["36_l_lateral.mp3"]
+  },
+  {
+    "phoneme_id": "p37",
+    "symbol": "[ʁ]",
+    "description_zh": "小舌音r",
+    "description_en": "Uvular fricative",
+    "mouth_shape_note": "舌根接近小舌摩擦",
+    "similar_sound_zh": "无对应，类似漱口声",
+    "similar_sound_en": "No English equivalent; 'gargling' r",
+    "audio_files": ["37_ʁ_uvular.mp3"]
+  },
+  {
+    "phoneme_id": "p38",
+    "symbol": "[h]",
+    "description_zh": "嘘气音h",
+    "description_en": "Glottal fricative",
+    "mouth_shape_note": "气流经声门摩擦",
+    "similar_sound_zh": "类似中文“喝”（hē）",
+    "similar_sound_en": "Similar to 'h' in 'hello'",
+    "audio_files": ["38_h_aspirate.mp3"]
   }
 ]
