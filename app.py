@@ -458,8 +458,8 @@ def create_app():
                 with gr.Row():
                     with gr.Column(scale=1):
                         vocab_mode      = gr.Radio(
-                            choices=[("选择题", "choice"), ("拼写模式", "spelling")],
-                            value="choice", label="学习模式"
+                            choices=[("闪卡复习", "flashcard"), ("拼写模式", "spelling")],
+                            value="flashcard", label="学习模式"
                         )
                         start_vocab_btn = gr.Button("开始/下一题", variant="primary")
                         gr.Markdown("---")
@@ -468,14 +468,24 @@ def create_app():
                         )
 
                     with gr.Column(scale=2):
-                        vocab_question    = gr.Textbox(label="题目",       interactive=False, lines=2)
-                        vocab_options    = gr.Radio(choices=[], label="选项",               visible=False)
-                        vocab_input      = gr.Textbox(label="输入法语单词", visible=False)
-                        vocab_submit     = gr.Button("提交答案", visible=False)
-                        vocab_result     = gr.Textbox(label="结果",  interactive=False)
-                        vocab_explanation = gr.Textbox(label="解析", interactive=False, lines=3)
+                        vocab_question    = gr.Markdown("### 请点击左侧开始")
                         vocab_audio       = gr.Audio(label="发音", interactive=False, autoplay=True, visible=False)
                         vocab_audio_btn   = gr.Button("📢 播放发音", visible=False)
+
+                        # Flashcard mode UI
+                        vocab_reveal_btn  = gr.Button("👀 显示释义", variant="primary", visible=False)
+                        with gr.Group(visible=False) as vocab_card_back:
+                            vocab_explanation = gr.Markdown("")
+                            with gr.Row():
+                                vocab_eval_0 = gr.Button("🔴 不认识", variant="stop")
+                                vocab_eval_3 = gr.Button("🟡 模糊", variant="secondary")
+                                vocab_eval_4 = gr.Button("🟢 记得", variant="secondary")
+                                vocab_eval_5 = gr.Button("🌟 太简单", variant="primary")
+
+                        # Spelling mode UI
+                        vocab_input      = gr.Textbox(label="输入法语单词", visible=False)
+                        vocab_submit     = gr.Button("提交答案", visible=False)
+                        vocab_result     = gr.Textbox(label="结果", interactive=False, visible=False)
 
                 # -----------------------------------------------------------------
                 # update_vocab_plan
@@ -634,44 +644,56 @@ def create_app():
                         )
 
                 # -----------------------------------------------------------------
-                # check_vocab_answer
+                # flashcard & spelling handlers
                 # -----------------------------------------------------------------
-                def check_vocab_answer(
-                    radio_val, text_val, mode,
-                    word_id, settings, sr_state_val, daily_progress_val
+                def reveal_vocab_card(word_id, settings):
+                    if not word_id: return gr.update(), gr.update(), gr.update()
+                    lexicon = DATA_CACHE["lexicon"]
+                    row = lexicon[lexicon["id"].astype(str) == str(word_id)].iloc[0]
+                    meaning = get_meaning_display(row, settings["language_mode"])
+                    
+                    example_zh = row.get('example_zh', '')
+                    example_en = row.get('example_en', '')
+                    example_trans = example_zh if settings["language_mode"] == "B" else f"{example_zh}\n> {example_en}"
+                    
+                    explanation = f"### 💡 {meaning}\n\n**📝 例句：**\n> {row['example_fr']}\n> {example_trans}"
+                    
+                    return gr.update(visible=False), gr.update(visible=True), gr.update(value=explanation)
+                
+                def evaluate_and_next(quality, mode, word_id, settings, sr_state_val, daily_progress_val):
+                    if word_id is not None:
+                        sr_state_val = update_sr_status(sr_state_val, word_id, quality)
+                        daily_progress_val = _cross_day_reset(daily_progress_val)
+                        daily_progress_val["reviewed_today"] += 1
+                    
+                    # Generate the next question directly
+                    return generate_vocab_question(mode, settings, sr_state_val, daily_progress_val)
+
+                def check_spelling_answer(
+                    text_val, mode, word_id, settings, sr_state_val, daily_progress_val
                 ):
                     if word_id is None:
-                        return "请先开始题目", "", sr_state_val, daily_progress_val
+                        return "请先开始题目", "", sr_state_val, daily_progress_val, gr.update()
 
-                    user_answer = radio_val if mode == "choice" else text_val
-                    lexicon      = DATA_CACHE["lexicon"]
-                    row          = lexicon[lexicon["id"].astype(str) == str(word_id)].iloc[0]
-
-                    if mode == "choice":
-                        is_correct = user_answer == get_meaning_display(
-                            row, settings["language_mode"]
-                        )
+                    lexicon = DATA_CACHE["lexicon"]
+                    row = lexicon[lexicon["id"].astype(str) == str(word_id)].iloc[0]
+                    
+                    user_clean = (text_val or "").lower().strip()
+                    correct_ans = row["lemma"].lower().strip()
+                    if user_clean == correct_ans:
+                        is_correct = True
                         is_almost_correct = False
+                    elif strip_accents(user_clean) == strip_accents(correct_ans):
+                        is_correct = False
+                        is_almost_correct = True
                     else:
-                        user_clean = (user_answer or "").lower().strip()
-                        correct_ans = row["lemma"].lower().strip()
-                        if user_clean == correct_ans:
-                            is_correct = True
-                            is_almost_correct = False
-                        elif strip_accents(user_clean) == strip_accents(correct_ans):
-                            is_correct = False
-                            is_almost_correct = True
-                        else:
-                            is_correct = False
-                            is_almost_correct = False
+                        is_correct = False
+                        is_almost_correct = False
 
-                    if mode == "choice":
-                        quality = 5 if is_correct else 3
-                    else:
-                        quality = 5 if is_correct else (4 if is_almost_correct else 0)
+                    quality = 5 if is_correct else (4 if is_almost_correct else 0)
 
-                    sr_state_val           = update_sr_status(sr_state_val, word_id, quality)
-                    daily_progress_val     = _cross_day_reset(daily_progress_val)
+                    sr_state_val = update_sr_status(sr_state_val, word_id, quality)
+                    daily_progress_val = _cross_day_reset(daily_progress_val)
                     daily_progress_val["reviewed_today"] += 1
 
                     if is_correct:
@@ -681,7 +703,12 @@ def create_app():
                     else:
                         result = f"❌ 错误。正确答案是：{row['lemma']}"
                     
-                    explanation = f"例句：{row['example_fr']}\n{row['example_zh']}"
+                    meaning = get_meaning_display(row, settings["language_mode"])
+                    example_zh = row.get('example_zh', '')
+                    example_en = row.get('example_en', '')
+                    example_trans = example_zh if settings["language_mode"] == "B" else f"{example_zh}\n> {example_en}"
+                    
+                    explanation = f"### 💡 {row['lemma']} - {meaning}\n\n**📝 例句：**\n> {row['example_fr']}\n> {example_trans}"
 
                     return result, explanation, sr_state_val, daily_progress_val, gr.update(visible=True)
 
@@ -706,13 +733,16 @@ def create_app():
                     api_name=False
                 )
 
+                # UI Outputs format:
+                # [vocab_question, vocab_reveal_btn, vocab_card_back, vocab_input, vocab_submit, vocab_result, vocab_explanation, current_word_id, sr_state, daily_progress, vocab_mode_state, vocab_audio_btn]
+                
                 start_vocab_btn.click(
                     generate_vocab_question,
                     inputs=[vocab_mode, settings_state, sr_state, daily_progress],
                     outputs=[
                         vocab_question,
-                        vocab_options, vocab_input, vocab_submit,
-                        vocab_result, vocab_explanation,
+                        vocab_reveal_btn, vocab_card_back, vocab_input, vocab_submit, vocab_result,
+                        vocab_explanation,
                         current_word_id,
                         sr_state, daily_progress,
                         vocab_mode_state,
@@ -720,10 +750,34 @@ def create_app():
                     ]
                 , api_name=False)
 
+                vocab_reveal_btn.click(
+                    reveal_vocab_card,
+                    inputs=[current_word_id, settings_state],
+                    outputs=[vocab_reveal_btn, vocab_card_back, vocab_explanation],
+                    api_name=False
+                )
+
+                # Flashcard evaluations
+                for btn, qual in [(vocab_eval_0, 0), (vocab_eval_3, 3), (vocab_eval_4, 4), (vocab_eval_5, 5)]:
+                    btn.click(
+                        lambda m, wid, st, sr, dp, q=qual: evaluate_and_next(q, m, wid, st, sr, dp),
+                        inputs=[vocab_mode_state, current_word_id, settings_state, sr_state, daily_progress],
+                        outputs=[
+                            vocab_question,
+                            vocab_reveal_btn, vocab_card_back, vocab_input, vocab_submit, vocab_result,
+                            vocab_explanation,
+                            current_word_id,
+                            sr_state, daily_progress,
+                            vocab_mode_state,
+                            vocab_audio_btn,
+                        ],
+                        api_name=False
+                    )
+
                 vocab_submit.click(
-                    check_vocab_answer,
+                    check_spelling_answer,
                     inputs=[
-                        vocab_options, vocab_input,
+                        vocab_input,
                         vocab_mode_state, current_word_id,
                         settings_state, sr_state, daily_progress
                     ],
