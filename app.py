@@ -23,7 +23,7 @@ import pandas as pd
 DATA_DIR     = Path(__file__).parent / "data"
 ASSETS_DIR   = Path(__file__).parent / "assets"
 
-LEXICON_PATH    = DATA_DIR / "lexicon_sample.csv"
+LEXICON_PATH    = DATA_DIR / "lexicon.csv"
 GRAMMAR_PATH     = DATA_DIR / "grammar_questions_sample.json"
 PHONEMES_PATH    = DATA_DIR / "phonemes.json"
 
@@ -579,10 +579,10 @@ def create_app():
                             word_type = "new"
                         else:
                             return (
-                                "🎉 恭喜！今日学习任务已完成\n\n"
-                                "✅ 新词目标达成\n"
-                                "🔄 暂无待复习词汇\n\n"
-                                "明天再来，继续加油！💪",
+                                "### 🎉 恭喜！今日学习任务已完成\n\n"
+                                "- ✅ 新词目标达成\n"
+                                "- 🔄 暂无待复习词汇\n\n"
+                                "**明天再来，继续加油！💪**",
                                 gr.update(visible=False),
                                 gr.update(visible=False),
                                 gr.update(visible=False),
