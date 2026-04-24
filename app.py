@@ -437,14 +437,16 @@ def create_app():
                             btn.click(
                                 lambda s=symbol: s,
                                 inputs=[],
-                                outputs=[phoneme_symbol_state]
+                                outputs=[phoneme_symbol_state],
+                                api_name=False
                             ).then(
                                 show_phoneme,
                                 inputs=[phoneme_symbol_state],
                                 outputs=[
                                     phoneme_symbol, phoneme_desc, phoneme_mouth,
                                     phoneme_similar, audio_player, audio_status
-                                ]
+                                ],
+                                api_name=False
                             )
 
             # =========================================================================
@@ -700,7 +702,8 @@ def create_app():
                 vocab_mode.change(
                     lambda m: m,
                     inputs=[vocab_mode],
-                    outputs=[vocab_mode_state]
+                    outputs=[vocab_mode_state],
+                    api_name=False
                 )
 
                 start_vocab_btn.click(
@@ -903,7 +906,8 @@ def create_app():
                 dictation_replay.click(
                     lambda aud: aud,
                     inputs=[dictation_audio],
-                    outputs=[dictation_audio]
+                    outputs=[dictation_audio],
+                    api_name=False
                 )
 
             # =========================================================================
@@ -1077,7 +1081,8 @@ def create_app():
                             btn.click(
                                 lambda l=letter: play_alphabet(l),
                                 inputs=[],
-                                outputs=[alphabet_player, alphabet_status]
+                                outputs=[alphabet_player, alphabet_status],
+                                api_name=False
                             )
 
         # 页脚
@@ -1095,4 +1100,4 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.launch(server_name="0.0.0.0", server_port=7860)
+    app.launch()
