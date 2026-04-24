@@ -320,7 +320,7 @@ def create_app():
                     save_settings,
                     inputs=[language_mode, target_level, daily_new_words],
                     outputs=[settings_state, settings_msg]
-                )
+                , api_name=False)
 
                 # -- 数据管理区块 -------------------------------------------------------
                 gr.Markdown("---")
@@ -372,7 +372,7 @@ def create_app():
                     on_export_click,
                     inputs=[sr_state, daily_progress, settings_state],
                     outputs=[export_btn]
-                )
+                , api_name=False)
 
                 import_btn.upload(
                     on_import_click,
@@ -381,7 +381,7 @@ def create_app():
                         sr_state, daily_progress, settings_state, import_msg,
                         language_mode, target_level, daily_new_words
                     ]
-                )
+                , api_name=False)
 
             # =========================================================================
             # Tab 2: 发音
@@ -718,7 +718,7 @@ def create_app():
                         vocab_mode_state,
                         vocab_audio_btn,
                     ]
-                )
+                , api_name=False)
 
                 vocab_submit.click(
                     check_vocab_answer,
@@ -728,19 +728,19 @@ def create_app():
                         settings_state, sr_state, daily_progress
                     ],
                     outputs=[vocab_result, vocab_explanation, sr_state, daily_progress, vocab_audio_btn]
-                )
+                , api_name=False)
 
                 vocab_audio_btn.click(
                     play_vocab_audio,
                     inputs=[current_word_id],
                     outputs=[vocab_audio]
-                )
+                , api_name=False)
 
                 app.load(
                     update_vocab_plan,
                     inputs=[settings_state, sr_state, daily_progress],
                     outputs=[vocab_plan_info, daily_progress]
-                )
+                , api_name=False)
 
             # =========================================================================
             # Tab 4: 听写
@@ -890,7 +890,7 @@ def create_app():
                         dictation_answer,  # ← [修复 3] 新增：清空答案
                         dictation_audio,
                     ]
-                )
+                , api_name=False)
 
                 dictation_submit.click(
                     check_dictation,
@@ -902,7 +902,7 @@ def create_app():
                         dictation_result, dictation_answer,
                         sr_state, daily_progress
                     ]
-                )
+                , api_name=False)
                 dictation_replay.click(
                     lambda aud: aud,
                     inputs=[dictation_audio],
@@ -1034,7 +1034,7 @@ def create_app():
                         current_grammar_qtype,
                         grammar_explanation,  # ← [修复 2] 新增：清空解析
                     ]
-                )
+                , api_name=False)
 
                 grammar_submit.click(
                     check_grammar_answer,
@@ -1044,7 +1044,7 @@ def create_app():
                         current_grammar_qtype
                     ],
                     outputs=[grammar_result, grammar_explanation]
-                )
+                , api_name=False)
             # =========================================================================
             # Tab 6: 字母表
             # =========================================================================
